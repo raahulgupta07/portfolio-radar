@@ -4,7 +4,7 @@
    18 Oct, as in the designs.
 2. Add weekly snapshots for the five weeks before, following the sample's
    portfolio progress curve, so trends and "change since last week" have
-   something to show. POS03 was At risk last week and turned Off track this week.
+   something to show. POS03 went Off track last week; Loyalty App turned At risk this week.
 3. Run today's normal sync: Multica fails (expired token) and shows as stale.
 4. Turn every MCP tool on (dev only; in production owners do this one by one).
 5. Run Radar's first check, and draft this week's digest so approval can be tried.
