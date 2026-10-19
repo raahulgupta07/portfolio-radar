@@ -3,6 +3,7 @@
 // gateway or the database.
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { createHash } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 
 const GATEWAY_URL = () => (env.GATEWAY_URL || 'http://localhost:8000').replace(/\/$/, '');
@@ -19,6 +20,8 @@ export class McpToolError extends Error {
 }
 
 type Entry = { at: number; value: unknown };
+const MAX_ENTRIES = 500;
+export const tokenKey = (token: string) => createHash('sha256').update(token).digest('base64url');
 const cache = new Map<string, Entry>();
 
 async function connect(token: string, server: string): Promise<Client> {
@@ -39,7 +42,7 @@ export async function callTool<T = Record<string, unknown>>(
 	opts: { cache?: boolean } = {}
 ): Promise<T> {
 	const useCache = opts.cache ?? true;
-	const key = `${token}|${server}|${tool}|${JSON.stringify(args)}`;
+	const key = `${tokenKey(token)}|${server}|${tool}|${JSON.stringify(args)}`;
 	const hit = cache.get(key);
 	if (useCache && hit && Date.now() - hit.at < CACHE_MS) return hit.value as T;
 
@@ -52,7 +55,13 @@ export async function callTool<T = Record<string, unknown>>(
 		}
 		const sc = (r.structuredContent ?? {}) as Record<string, unknown>;
 		const value = (Object.keys(sc).length === 1 && 'result' in sc ? sc.result : sc) as T;
-		if (useCache) cache.set(key, { at: Date.now(), value });
+		if (useCache) {
+			// Drop old entries so expired tokens and old results do not pile up.
+			const now = Date.now();
+			for (const [k, v] of cache) if (now - v.at > CACHE_MS) cache.delete(k);
+			while (cache.size >= MAX_ENTRIES) cache.delete(cache.keys().next().value!);
+			cache.set(key, { at: now, value });
+		}
 		return value;
 	} finally {
 		await client.close().catch(() => {});

@@ -25,7 +25,7 @@ const COLS: [string, (r: ProjectRow) => unknown][] = [
 function cell(v: unknown): string {
 	const s = v == null ? '' : String(v);
 	// Quote, and stop spreadsheet formulas from running.
-	const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
+	const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
 	return `"${safe.replace(/"/g, '""')}"`;
 }
 

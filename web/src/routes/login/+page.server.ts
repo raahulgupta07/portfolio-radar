@@ -5,12 +5,19 @@ import { OIDC_COOKIE, SESSION_COOKIE, USER_COOKIE, devUsers, devLoginEnabled, ss
 
 type WhoAmI = { kind: 'human' | 'agent' | 'service'; id: string; roles: string[] };
 
-function safeNext(next: string | null): string {
-	return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+/** Only a path on this site: no other host, no backslashes or control characters (browsers read "\\" as "/"). */
+function safeNext(next: string | null, origin = 'http://x.invalid'): string {
+	if (!next || !next.startsWith('/') || /[\\\u0000-\u001f]/.test(next)) return '/';
+	try {
+		const u = new URL(next, origin);
+		return u.origin === new URL(origin).origin ? u.pathname + u.search + u.hash : '/';
+	} catch {
+		return '/';
+	}
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	if (locals.user) redirect(303, safeNext(url.searchParams.get('next')));
+	if (locals.user) redirect(303, safeNext(url.searchParams.get('next'), url.origin));
 	return {
 		sso: ssoEnabled(),
 		dev: devLoginEnabled(),
@@ -34,8 +41,8 @@ export const actions: Actions = {
 		const secure = url.protocol === 'https:';
 		const opts = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure, maxAge: 60 * 60 * 10 };
 		cookies.set(SESSION_COOKIE, token, opts);
-		cookies.set(USER_COOKIE, JSON.stringify({ id: who.id, name: user.name, kind: who.kind, roles: who.roles }), opts);
-		redirect(303, safeNext(url.searchParams.get('next')));
+		cookies.set(USER_COOKIE, JSON.stringify({ name: user.name }), opts); // display name only; roles come from the gateway
+		redirect(303, safeNext(url.searchParams.get('next'), url.origin));
 	},
 	sso: async ({ cookies, url }) => {
 		if (!ssoEnabled()) return fail(400, { error: 'City SSO is not set up yet.' });

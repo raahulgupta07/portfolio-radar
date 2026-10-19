@@ -1,30 +1,37 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { SESSION_COOKIE, USER_COOKIE } from '$lib/server/auth';
+import { displayName, whoami } from '$lib/server/session';
 
-// /api/teams/messages: Microsoft Teams, checked by the gateway against Microsoft's token.
-const PUBLIC = ['/login', '/auth/', '/healthz', '/api/teams/messages'];
+// Exact paths only, so a new route is never public by accident. /api/teams/messages: Microsoft Teams,
+// checked by the gateway against Microsoft's token.
+const PUBLIC = new Set(['/login', '/healthz', '/api/teams/messages', '/auth/callback']);
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const path = event.url.pathname;
+	const isPublic = PUBLIC.has(path);
 	const token = event.cookies.get(SESSION_COOKIE) ?? null;
 	let user: App.User | null = null;
-	const raw = event.cookies.get(USER_COOKIE);
-	if (token && raw) {
+	if (token && !(isPublic && path !== '/login')) {
 		try {
-			user = JSON.parse(raw);
+			// The gateway says who this token is; the cookie gives only the display name.
+			const who = await whoami(token);
+			if (who) user = { ...who, name: displayName(event.cookies.get(USER_COOKIE)) ?? who.id };
 		} catch {
-			user = null;
+			// Gateway down: let the page load (it shows the error) with no roles at all.
+			user = { id: '', name: displayName(event.cookies.get(USER_COOKIE)) ?? 'Signed in', kind: 'human', roles: [] };
 		}
 	}
 	event.locals.token = user ? token : null;
 	event.locals.user = user;
 
-	const path = event.url.pathname;
-	if (!event.locals.user && !PUBLIC.some((p) => path === p || path.startsWith(p))) {
+	if (!event.locals.user && !isPublic) {
 		redirect(303, `/login?next=${encodeURIComponent(path + event.url.search)}`);
 	}
 	const response = await resolve(event);
 	response.headers.set('X-Frame-Options', 'DENY');
 	response.headers.set('Referrer-Policy', 'same-origin');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	if (event.url.protocol === 'https:') response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 	return compress(event.request, response);
 };
 
