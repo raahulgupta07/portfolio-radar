@@ -34,15 +34,19 @@ that checks every project and tells people what needs attention.
 - Write tests with each feature (connector tests use recorded API responses).
 - UI copy: plain, simple international English. Short sentences, everyday words.
 
-## Suggested stack (change only if the CTO prototype uses something else)
+## Stack (decided 19 Oct 2026, see `docs/architecture.md`)
 
-- Web: Next.js (React, TypeScript), CSS variables from `docs/design-system.md`
-- API + adapter + scheduler: Node.js (TypeScript) — or Python FastAPI if the team prefers
-- Database: PostgreSQL
-- Auth: City SSO via Microsoft Entra ID (OIDC)
-- Radar: runs on the CityGPT platform, or as a worker in this repo calling the LLM API,
-  with read-only tools over our database
+- **MCP-first:** every read and action goes through the City MCP Gateway
+  (FastAPI + official Python MCP SDK). Nothing else connects to the database or the trackers.
+- Connectors: httpx, GET only, inside the source servers
+- Agent: Agno 2.5 as an MCP client
+- Database: PostgreSQL (schema `app` for data, `mcp` for registry and audit), SQLAlchemy, Alembic
+- Schedules: APScheduler
+- Web: SvelteKit + Svelte 5, Tailwind 4 with tokens from `docs/design-system.md`;
+  server load functions call MCP
+- Auth: City SSO via Microsoft Entra ID (OIDC), user token passed to the gateway
 - Run locally with one command: `docker compose up`
+- **Agents draft, people approve:** `decide_approval` accepts only a human approver.
 
 ## Open questions (ask the user before guessing)
 
