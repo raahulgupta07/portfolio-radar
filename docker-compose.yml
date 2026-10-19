@@ -1,6 +1,6 @@
-# Local run: docker compose up
-# Phase 1-2 services. `worker` (adapter, scheduler, Radar) and `web` (SvelteKit)
-# are added in later phases.
+# Local run: docker compose up --build
+# Then load sample data once: docker compose exec mcp python -m app.adapter demo
+# Open http://localhost:3000
 services:
   db:
     image: postgres:16
@@ -15,6 +15,7 @@ services:
       interval: 3s
       retries: 20
 
+  # City MCP Gateway: the only way to the data and the trackers.
   mcp:
     build:
       context: .
@@ -30,6 +31,33 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz')"]
       interval: 10s
       retries: 5
+    restart: unless-stopped
+
+  # Scheduled jobs (nightly sync, Radar). Reaches data only through the gateway.
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "app.worker"]
+    env_file: backend/.env.example
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
+      GATEWAY_URL: http://mcp:8000
+    depends_on:
+      mcp: {condition: service_healthy}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    env_file: web/.env.example
+    environment:
+      GATEWAY_URL: http://mcp:8000
+      ORIGIN: http://localhost:3000
+    ports: ["3000:3000"]
+    depends_on:
+      mcp: {condition: service_healthy}
     restart: unless-stopped
 
 volumes:

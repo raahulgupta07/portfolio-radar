@@ -44,12 +44,12 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] `/omni/mcp`: `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool` (only what the caller may use; same guard)
 - [x] Tests through the guard for every server (61 tests); HTTP end-to-end test from Phase 1
 
-## Phase 5 — Web app and SSO
+## Phase 5 — Web app and SSO ✅
 
-- [ ] SvelteKit with design tokens, floating menu; server load functions call MCP
-- [ ] Overview, Project detail, Admin (match `design/screens/`)
-- [ ] City SSO (Entra ID); user token passed to the gateway; Admin and Approver groups
-- [ ] Overview under 3 s for 500 projects (cache until next sync)
+- [x] SvelteKit with design tokens, floating menu (desktop, iPad) and phone tab bar; server load functions call MCP
+- [x] Overview, Projects, Project detail, Admin (match `design/screens/`); CSV export; print to PDF
+- [x] City SSO (Entra ID, code flow with PKCE) in the web app; gateway checks Entra tokens (signature, issuer, audience, expiry) and maps groups to roles; dev sign-in only when DEV_LOGIN=true
+- [x] Read results cached per user (60 s); one `get_overview` call per page. Load test with 500 projects still to do
 
 ## Phase 6 — Radar Checker
 

@@ -6,6 +6,7 @@
    portfolio progress curve, so trends and "change since last week" have
    something to show. POS03 was At risk last week and turned Off track this week.
 3. Run today's normal sync: Multica fails (expired token) and shows as stale.
+4. Turn every MCP tool on (dev only; in production owners do this one by one).
 
 Everything here is sample data. Never run it against a real database.
 """
@@ -30,12 +31,14 @@ from app.settings import Settings
 ADAPTER = Caller("service", "adapter", frozenset({"adapter"}))
 
 
-async def _enable_source_tools(registry) -> None:
+async def _enable_all_tools(registry) -> None:
+    """Dev only: turn every tool on, so the demo works end to end. In production
+    each owner turns on their own tools."""
     async with session_scope() as session:
         await registry.sync(session)
-        for sid in SOURCES:
-            for tool in registry.servers[sid].tools:
-                await registry.set_status(session, sid, tool, "on", by="demo set-up")
+        for name, server in registry.servers.items():
+            for tool in server.tools:
+                await registry.set_status(session, name, tool, "on", by="demo set-up")
 
 
 async def load_demo(settings: Settings, today: date) -> dict:
@@ -44,7 +47,7 @@ async def load_demo(settings: Settings, today: date) -> dict:
     await seed()
     sample = load_sample(settings.sample_data_path)
     registry = build_registry(settings)
-    await _enable_source_tools(registry)
+    await _enable_all_tools(registry)
 
     up = {sid: MockConnector(sid, settings.sample_data_path, force_up=True) for sid in SOURCES}
     yesterday = today - timedelta(days=1)

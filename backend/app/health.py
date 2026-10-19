@@ -85,10 +85,10 @@ def assess(p: ProjectInfo, today: date, t: Thresholds, off_track_codes: frozense
     off = []
     for m, days in overdue:
         if days > t.overdue_days:
-            off.append(f"Milestone '{m.name}' is {days} days overdue (due {m.due_date.isoformat()})")
+            off.append(f"Milestone '{m.name}' is {days} days overdue (due {m.due_date:%d %b})")
     if p.status == "On hold" and overdue and not off:
         m, days = overdue[0]
-        off.append(f"On hold with milestone '{m.name}' overdue (due {m.due_date.isoformat()})")
+        off.append(f"On hold with milestone '{m.name}' overdue (due {m.due_date:%d %b})")
     elif p.status == "On hold" and off:
         off.append("Status is On hold")
     if off:

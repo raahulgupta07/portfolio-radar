@@ -366,5 +366,7 @@ async def roadmap(session: AsyncSession, today: date) -> dict[str, Any]:
 
 async def sync_status(session: AsyncSession) -> dict[str, Any]:
     s = await PortfolioData.load(session)
+    order = ["jira", "openproject", "multica"]
+    srcs = sorted(s.sources.values(), key=lambda x: order.index(x.id) if x.id in order else 9)
     return {"sources": [{**_source_info(src), "projects": sum(1 for p in s.projects if p.source_id == src.id)}
-                        for src in s.sources.values()]}
+                        for src in srcs]}

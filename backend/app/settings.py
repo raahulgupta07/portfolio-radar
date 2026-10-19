@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     gateway_url: str = "http://localhost:8000"
     adapter_token: str = "dev-adapter"
 
+    # City SSO (Microsoft Entra ID). When ENTRA_TENANT_ID is set, the gateway accepts Entra access tokens.
+    entra_tenant_id: str = ""
+    entra_audience: str = ""  # the gateway's API app ID URI or client ID
+    entra_default_roles: list[str] = Field(default_factory=lambda: ["viewer"])  # any signed-in employee
+    entra_group_roles: dict[str, list[str]] = Field(default_factory=dict)  # Entra group object ID -> roles
+    # Apps signing in as themselves (client credentials): app ID -> {"kind": "agent"|"service", "id": ..., "roles": [...]}
+    entra_apps: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
     rate_limit_per_minute: int = 120
     # Seconds a tool's on/off status is cached before re-reading the registry.
     registry_cache_seconds: float = 5.0

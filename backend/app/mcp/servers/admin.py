@@ -87,9 +87,16 @@ def _gateway(ctx: ToolContext):
 
 @server.tool(callers=CALLERS, roles=ROLES)
 async def list_sources(args, ctx: ToolContext) -> dict:
-    """Each source with its team, last sync, last good sync, error and project count."""
+    """Each source with its team, URL, secret name, last sync, last good sync, error and project count."""
     async with session_scope() as session:
-        return await sync_status(session)
+        status = await sync_status(session)
+        rows = {s.id: s for s in (await session.scalars(select(Source))).all()}
+    for s in status["sources"]:
+        row = rows.get(s["id"])
+        s["base_url"] = row.base_url if row else ""
+        s["secret_ref"] = row.secret_ref if row else ""  # the name in the secret store, never the secret
+        s["enabled"] = row.enabled if row else False
+    return status
 
 
 @server.tool(callers=CALLERS, roles=ROLES, input_model=SourceArg)
@@ -237,7 +244,7 @@ async def decide_tool_change(args: ChangeDecision, ctx: ToolContext) -> dict:
     return {"change_id": args.change_id, "approved": args.approve}
 
 
-@server.tool(callers=CALLERS, roles=ROLES, input_model=AuditArgs)
+@server.tool(callers=CALLERS, roles=ROLES, input_model=AuditArgs, redact=False)  # admins must see who called
 async def get_audit(args: AuditArgs, ctx: ToolContext) -> dict:
     """The audit log: every tool call by every caller, newest first."""
     async with session_scope() as session:
