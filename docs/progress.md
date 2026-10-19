@@ -28,14 +28,14 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] Owner CLI until the Admin page exists: `python -m app.mcp.cli tools | on | off | changes | approve | reject | calls`
 - [x] Changed tools move to review and need owner approval (Uber pattern)
 
-## Phase 3 — Adapter, health rule, snapshots
+## Phase 3 — Adapter, health rule, snapshots ✅ (49 tests pass; health matches all 10 design colours)
 
-- [ ] Adapter as MCP client of the source servers (service token)
-- [ ] Prefix filter (longest match, case-insensitive), non-compliant list, duplicate code flag
-- [ ] Status mapping from config; sync log; stale handling (FR-08, FR-09)
-- [ ] Health rule (FR-17) with thresholds as settings; daily snapshots (FR-18); "what changed"
-- [ ] Scheduler: 02:00 sync
-- [ ] Tests: prefix rule, health rule, stale source
+- [x] Adapter as MCP client of the source servers (service token)
+- [x] Prefix filter (longest match, case-insensitive), non-compliant list, duplicate code flag
+- [x] Status mapping from config; sync log; stale handling (FR-08, FR-09)
+- [x] Health rule (FR-17) with thresholds as settings; daily snapshots (FR-18); "what changed"
+- [x] Scheduler: 02:00 sync
+- [x] Tests: prefix rule, health rule, stale source
 
 ## Phase 4 — App servers
 
@@ -84,7 +84,9 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | Sample data `red/amber/green/done` maps to Off track / At risk / On track / Done |
 | 19 Oct 2026 | Source servers share one tool set (`list_projects`, `get_project`, …) so the adapter treats every source the same |
 | 19 Oct 2026 | MCP Python SDK 2.x (`MCPServer`); the guard is SDK middleware that takes over `tools/list` and `tools/call` |
-| 19 Oct 2026 | Mock data has no owners, so every project will show "no owner" until real connectors are in |
+| 19 Oct 2026 | Sample data now has placeholder owners (`<team> lead (sample)`); Agent Ops Console has none, as in the designs |
+| 19 Oct 2026 | Unknown tracker status stops that project syncing and is logged (no guessing); mapping in `backend/config/status_map.json` |
+| 19 Oct 2026 | `python -m app.adapter demo` loads sample data with 6 weeks of history (dev only) |
 
 ## Open questions
 

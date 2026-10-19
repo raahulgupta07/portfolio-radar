@@ -27,6 +27,23 @@ class Settings(BaseSettings):
     mcp_allowed_hosts: list[str] = Field(default_factory=lambda: ["127.0.0.1:*", "localhost:*", "mcp:*"])
     mcp_allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:*", "http://127.0.0.1:*"])
 
+    # Health rule thresholds (PRD FR-17). Admins change them in Admin → Radar.
+    health_overdue_days: int = 3
+    health_behind_points: int = 15
+    health_milestone_window_days: int = 7
+    stale_days: int = 14
+
+    # Nightly jobs (Asia/Yangon). Cron fields: minute hour day month weekday.
+    timezone: str = "Asia/Yangon"
+    sync_cron: str = "0 2 * * *"
+    status_map_path: Path = BACKEND_DIR / "config" / "status_map.json"
+    # Fix "today" for demos and tests (YYYY-MM-DD). Empty = the real date in `timezone`.
+    today: str = ""
+
+    # How the worker reaches the gateway (MCP over HTTP) and the service tokens it uses.
+    gateway_url: str = "http://localhost:8000"
+    adapter_token: str = "dev-adapter"
+
     rate_limit_per_minute: int = 120
     # Seconds a tool's on/off status is cached before re-reading the registry.
     registry_cache_seconds: float = 5.0

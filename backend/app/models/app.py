@@ -61,6 +61,8 @@ class Project(Base):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     percent_done: Mapped[int | None] = mapped_column(Integer, nullable=True)
     health: Mapped[str | None] = mapped_column(String(12), nullable=True)  # on_track, at_risk, off_track, done
+    health_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status_raw: Mapped[str | None] = mapped_column(String(60), nullable=True)  # the tracker's own status
     strategy_tag: Mapped[str | None] = mapped_column(String(100), nullable=True)
     source_id: Mapped[str] = mapped_column(ForeignKey(f"{SCHEMA}.source.id"))
     source_key: Mapped[str] = mapped_column(String(100))

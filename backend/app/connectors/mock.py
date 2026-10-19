@@ -1,12 +1,12 @@
 """Mock connector: serves design/sample-data.json as if it came from the real
 tracker. Used until real API access exists, and in tests.
 
-The sample file has no milestone lists, sprints, task counts or owners. The
+The sample file has no milestone lists, sprints or task counts. The
 mock fills them in a fixed, clearly fake way:
 - milestones: the one "next milestone" per project
 - sprints: one active two-week sprint ending on the sample's as-of date
 - task counts: 40 tasks, done = percent_done
-- owners: none (the sample has none)
+- owners: as in the sample (placeholder names; Agent Ops Console has none)
 A source whose sample status is "failed" raises SourceUnavailable on every call,
 like the expired Multica token in the designs.
 """
@@ -42,8 +42,9 @@ def _slug(name: str) -> str:
 
 
 class MockConnector:
-    def __init__(self, source_id: str, sample_path: Path) -> None:
+    def __init__(self, source_id: str, sample_path: Path, *, force_up: bool = False) -> None:
         self.source_id = source_id
+        self.force_up = force_up  # ignore the sample's failure (demo history)
         self._data = load_sample(sample_path)
         self._source = next((s for s in self._data["sources"] if s["id"] == source_id), None)
         if self._source is None:
@@ -53,7 +54,7 @@ class MockConnector:
         self._non_compliant = [n for n in self._data.get("non_compliant", []) if n["source"] == source_id]
 
     def _check_up(self) -> None:
-        if self._source.get("status") == "failed":
+        if self._source.get("status") == "failed" and not self.force_up:
             raise SourceUnavailable(f"{self._source['name']}: {self._source.get('error', 'unavailable')}")
 
     def _url(self, key: str) -> str:
@@ -82,7 +83,7 @@ class MockConnector:
         return SourceProject(
             key=key, name=f"{key} {p['name']}", url=self._url(key),
             updated_at=datetime.fromisoformat(p["source_updated_at"]),
-            owner=None, team=p.get("team"), status=p["status"],
+            owner=p.get("owner"), team=p.get("team"), status=p["status"],
             start_date=date.fromisoformat(p["start_date"]) if p.get("start_date") else None,
             end_date=date.fromisoformat(p["end_date"]) if p.get("end_date") else None,
             percent_done=p.get("percent_done"), strategy_tag=p.get("strategy_tag"),

@@ -1,0 +1,56 @@
+"""Adapter commands.
+
+    python -m app.adapter seed                  add sources and prefixes (first run)
+    python -m app.adapter sync                  sync now, through the gateway over MCP/HTTP
+    python -m app.adapter sync --source jira    one source only
+    python -m app.adapter sync --in-process     no running gateway needed (dev); the guard still runs
+    python -m app.adapter demo                  dev only: sample data with history (see app/adapter/demo.py)
+"""
+
+import argparse
+import asyncio
+import json
+
+from app.adapter.readers import GatewayReader, McpHttpReader
+from app.adapter.demo import load_demo
+from app.adapter.seed import seed
+from app.adapter.sync import sync_all
+from app.health import today_in
+from app.mcp.guard import Gateway
+from app.mcp.identity import TokenResolver
+from app.mcp.servers import build_registry, build_services
+from app.settings import get_settings
+
+
+async def main() -> None:
+    p = argparse.ArgumentParser(prog="python -m app.adapter")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("seed")
+    sub.add_parser("demo")
+    s = sub.add_parser("sync")
+    s.add_argument("--source")
+    s.add_argument("--in-process", action="store_true")
+    args = p.parse_args()
+    settings = get_settings()
+
+    if args.cmd == "seed":
+        print(json.dumps(await seed()))
+        return
+
+    today = today_in(settings)
+    if args.cmd == "demo":
+        print(json.dumps(await load_demo(settings, today), indent=2))
+        return
+    if args.in_process:
+        registry = build_registry(settings)
+        gateway = Gateway(registry, settings, build_services(settings))
+        caller = TokenResolver(settings).resolve(f"Bearer {settings.adapter_token}")
+        summary = await sync_all(GatewayReader(gateway, caller), settings, today, args.source)
+    else:
+        async with McpHttpReader(settings.gateway_url, settings.adapter_token) as reader:
+            summary = await sync_all(reader, settings, today, args.source)
+    print(json.dumps(summary.as_dict(), indent=2))
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

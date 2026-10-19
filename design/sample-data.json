@@ -45,7 +45,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-09-01",
       "end_date": "2026-12-31",
-      "source_updated_at": "2026-10-12"
+      "source_updated_at": "2026-10-12",
+      "owner": "Digital Teams lead (sample)"
     },
     {
       "code": "CHL-DP-LOYAL02",
@@ -60,7 +61,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-08-01",
       "end_date": "2026-12-20",
-      "source_updated_at": "2026-10-19"
+      "source_updated_at": "2026-10-19",
+      "owner": "Digital Teams lead (sample)"
     },
     {
       "code": "CHL-IT-DAAI-AGT04",
@@ -75,7 +77,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-10-01",
       "end_date": "2027-01-31",
-      "source_updated_at": "2026-10-18"
+      "source_updated_at": "2026-10-18",
+      "owner": null
     },
     {
       "code": "CHL-DP-PORTAL01",
@@ -90,7 +93,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-07-01",
       "end_date": "2026-12-15",
-      "source_updated_at": "2026-10-18"
+      "source_updated_at": "2026-10-18",
+      "owner": "Digital Teams lead (sample)"
     },
     {
       "code": "CHL-IT-DAAI-GPT01",
@@ -105,7 +109,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-07-01",
       "end_date": "2026-12-31",
-      "source_updated_at": "2026-10-18"
+      "source_updated_at": "2026-10-18",
+      "owner": "AI Team lead (sample)"
     },
     {
       "code": "CHL-IT-DWH04",
@@ -120,7 +125,8 @@
       "strategy_tag": "Benchmark of Excellence",
       "start_date": "2026-07-15",
       "end_date": "2026-11-30",
-      "source_updated_at": "2026-10-19"
+      "source_updated_at": "2026-10-19",
+      "owner": "Data Team lead (sample)"
     },
     {
       "code": "CHL-IT-DAAI-FC03",
@@ -135,7 +141,8 @@
       "strategy_tag": "Benchmark of Excellence",
       "start_date": "2026-08-01",
       "end_date": "2026-12-15",
-      "source_updated_at": "2026-10-17"
+      "source_updated_at": "2026-10-17",
+      "owner": "Data Team lead (sample)"
     },
     {
       "code": "CHL-IT-DAAI-DOC02",
@@ -150,7 +157,8 @@
       "strategy_tag": "Innovative Market Leader",
       "start_date": "2026-08-15",
       "end_date": "2026-12-15",
-      "source_updated_at": "2026-10-18"
+      "source_updated_at": "2026-10-18",
+      "owner": "AI Team lead (sample)"
     },
     {
       "code": "CHL-DP-HR05",
@@ -165,7 +173,8 @@
       "strategy_tag": "Employer of Choice",
       "start_date": "2026-11-11",
       "end_date": "2027-01-31",
-      "source_updated_at": "2026-10-16"
+      "source_updated_at": "2026-10-16",
+      "owner": "Digital Teams lead (sample)"
     },
     {
       "code": "CMHL-IT-BI01",
@@ -180,7 +189,8 @@
       "strategy_tag": "Benchmark of Excellence",
       "start_date": "2026-07-01",
       "end_date": "2026-09-30",
-      "source_updated_at": "2026-10-01"
+      "source_updated_at": "2026-10-01",
+      "owner": "Data Team lead (sample)"
     }
   ],
   "dependencies": [

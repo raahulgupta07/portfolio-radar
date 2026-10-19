@@ -1,0 +1,25 @@
+{
+  "_help": "Maps each tracker's own status names to the four app statuses: Not started, In progress, Done, On hold. Matching ignores case. 'default' applies to every source; a source section overrides it. A status with no mapping stops that project from syncing and shows up in the sync log, so add it here instead of guessing.",
+  "default": {
+    "not started": "Not started",
+    "new": "Not started",
+    "open": "Not started",
+    "to do": "Not started",
+    "backlog": "Not started",
+    "in progress": "In progress",
+    "in development": "In progress",
+    "in review": "In progress",
+    "done": "Done",
+    "closed": "Done",
+    "completed": "Done",
+    "on hold": "On hold",
+    "blocked": "On hold",
+    "paused": "On hold"
+  },
+  "jira": {},
+  "openproject": {
+    "scheduled": "Not started",
+    "in specification": "Not started"
+  },
+  "multica": {}
+}
