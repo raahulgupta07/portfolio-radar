@@ -79,9 +79,8 @@ flowchart LR
 
 | Server | Tools | Who may call |
 | --- | --- | --- |
-| `/jira/mcp` | `search_projects`, `get_versions`, `get_sprints`, `get_issue_counts`, `get_links` | service: adapter; human: admin (optional) |
-| `/openproject/mcp` | `list_projects`, `get_work_packages`, `get_versions`, `get_relations` | service: adapter; human: admin (optional) |
-| `/multica/mcp` | To define once the Multica API is known | service: adapter |
+| `/jira/mcp`, `/openproject/mcp`, `/multica/mcp` | Same tools on each: `list_projects`, `get_project`, `get_milestones`, `get_sprints`, `get_task_counts`, `get_links`, `get_risks` | service: adapter; human: admin |
+| `/system/mcp` | `whoami`, `ping` (connection checks) | any caller |
 | `/portfolio/mcp` | `get_overview`, `list_projects`, `get_project`, `get_history`, `get_roadmap`, `get_dependencies`, `get_risks`, `get_sync_status` | human: viewer; agent |
 | `/radar/mcp` | `get_conversation`, `post_message`, `get_findings`, `save_findings`, `create_draft`, `decide_approval`, `remember`, `forget` | human: chat, approver decides; agent: drafts only; service: Radar run |
 | `/admin/mcp` | `list_sources`, `set_prefixes`, `set_schedule`, `run_sync`, `get_sync_log`, `get_non_compliant`, `set_tool_status` | human: admin |

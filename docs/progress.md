@@ -4,27 +4,29 @@ Plan v1 · 19 Oct 2026 · Architecture: `docs/architecture.md` (MCP-first)
 
 Rule: finish and test each phase before the next. Tick items off as they are done.
 
-## Phase 1 — Foundation and MCP gateway core
+## Phase 1 — Foundation and MCP gateway core ✅ (19 Oct 2026, 35 tests pass)
 
 Goal: `docker compose up` starts Postgres and the gateway; the guard works; tests pass.
 
-- [ ] Repo layout: `backend/` (FastAPI), `web/` (SvelteKit, empty shell), `docker-compose.yml` (`mcp`, `worker`, `db`)
-- [ ] Settings from environment variables (`.env.example`, no secrets in code)
-- [ ] PostgreSQL schemas `app` and `mcp`; Alembic migrations for the PRD data model
-- [ ] Registry tables: `mcp.server`, `mcp.tool` (owner, version, description, roles, callers, status), `mcp.tool_change`, `mcp.call` (audit)
-- [ ] Gateway skeleton: FastAPI app, MCP SDK with Streamable HTTP, one endpoint per server, `/healthz`, `/readyz`
-- [ ] Guard: token check (dev tokens now, Entra ID in Phase 5), caller type (human, agent, service), tool role, tool status (off by default), rate limit
-- [ ] Field projection (`fields` list) and PII removal (emails, phone numbers)
-- [ ] Audit row for every call, allowed or blocked
-- [ ] Tests: blocked when tool is off, wrong role, wrong caller type; projection; PII; audit row written
+- [x] Repo layout: `backend/` (FastAPI), `docker-compose.yml` (`db`, `mcp`). `worker` and `web` come with their phases
+- [x] Settings from environment variables (`.env.example`, no secrets in code)
+- [x] PostgreSQL schemas `app` and `mcp`; Alembic migrations for the PRD data model
+- [x] Registry tables: `mcp.server`, `mcp.tool` (owner, version, description, roles, callers, status), `mcp.tool_change`, `mcp.call` (audit)
+- [x] Gateway skeleton: FastAPI app, MCP SDK with Streamable HTTP, one endpoint per server, `/healthz`, `/readyz`
+- [x] Guard: token check (dev tokens now, Entra ID in Phase 5), caller type (human, agent, service), tool role, tool status (off by default), rate limit
+- [x] Field projection (`fields` list) and PII removal (emails, phone numbers)
+- [x] Audit row for every call, allowed or blocked
+- [x] Tests: blocked when tool is off, wrong role, wrong caller type; projection; PII; audit row written
 
-## Phase 2 — Connectors and source servers
+## Phase 2 — Connectors and source servers ✅ mock (real connectors wait for API access)
 
-- [ ] Connector interface and mock connector reading `design/sample-data.json`
-- [ ] GET-only HTTP client (refuses any other method) with retry and back-off
-- [ ] `/jira/mcp`, `/openproject/mcp`, `/multica/mcp` on the mock connector
+- [x] Connector interface and mock connector reading `design/sample-data.json`
+- [x] GET-only HTTP client (refuses any other method) with retry and back-off
+- [x] `/jira/mcp`, `/openproject/mcp`, `/multica/mcp` on the mock connector
 - [ ] Real JIRA and OpenProject connectors once access is confirmed (recorded responses for tests)
-- [ ] Tests: GET only, mapping, one failing source does not stop the others
+- [x] Tests: GET only, retry and back-off, failed source reported clearly (Multica token expired)
+- [x] Owner CLI until the Admin page exists: `python -m app.mcp.cli tools | on | off | changes | approve | reject | calls`
+- [x] Changed tools move to review and need owner approval (Uber pattern)
 
 ## Phase 3 — Adapter, health rule, snapshots
 
@@ -80,6 +82,9 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | Connectors are plain REST (GET only) inside source servers, not third-party MCP servers |
 | 19 Oct 2026 | Build our own gateway with ideas from Uber's MCP Gateway; no AutoCrawler for now |
 | 19 Oct 2026 | Sample data `red/amber/green/done` maps to Off track / At risk / On track / Done |
+| 19 Oct 2026 | Source servers share one tool set (`list_projects`, `get_project`, …) so the adapter treats every source the same |
+| 19 Oct 2026 | MCP Python SDK 2.x (`MCPServer`); the guard is SDK middleware that takes over `tools/list` and `tools/call` |
+| 19 Oct 2026 | Mock data has no owners, so every project will show "no owner" until real connectors are in |
 
 ## Open questions
 
