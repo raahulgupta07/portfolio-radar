@@ -86,8 +86,8 @@ export async function finishSso(
 export function initials(name: string): string {
 	return name
 		.split(/[\s.@_-]+/)
-		.filter(Boolean)
+		.filter((p) => /^\p{L}/u.test(p)) // skip "(sample)" and other non-words
 		.slice(0, 2)
 		.map((p) => p[0]!.toUpperCase())
-		.join('');
+		.join('') || '?';
 }
