@@ -29,6 +29,11 @@ class Source(Base):
     team: Mapped[str] = mapped_column(String(100), default="")
     base_url: Mapped[str] = mapped_column(String(500), default="")
     secret_ref: Mapped[str] = mapped_column(String(200), default="")  # name in the secret store, never the secret
+    flavor: Mapped[str] = mapped_column(String(16), default="", server_default="")  # JIRA: cloud or datacenter
+    auth_method: Mapped[str] = mapped_column(String(32), default="", server_default="")
+    account: Mapped[str] = mapped_column(String(200), default="", server_default="")  # service account the token belongs to
+    # Statuses seen in the last sync that have no mapping yet (for Admin → status mapping).
+    unmapped_statuses: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_good_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -75,6 +75,14 @@ class Settings(BaseSettings):
     smtp_from: str = "portfolio-radar@cityholdings.com.mm"
     notify_email_to: list[str] = Field(default_factory=list)
 
+    # Secret store. The app keeps only secret names (kv://name); values live here.
+    # keyvault: Azure Key Vault (production). local: a file, dev and test only.
+    secret_store: Literal["local", "keyvault"] = "local"
+    secret_store_path: Path = BACKEND_DIR / ".secrets" / "dev-secrets.json"
+    key_vault_url: str = ""  # e.g. https://city-portfolio-kv.vault.azure.net/
+    # Seconds between re-reads of agents and SSO settings saved in Admin.
+    identity_refresh_seconds: float = 30.0
+
     rate_limit_per_minute: int = 120
     # Seconds a tool's on/off status is cached before re-reading the registry.
     registry_cache_seconds: float = 5.0

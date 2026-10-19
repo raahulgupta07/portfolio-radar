@@ -21,7 +21,7 @@ async def seed() -> dict[str, int]:
         have = {s.id for s in (await session.scalars(select(Source))).all()}
         for sid, (name, team) in SOURCES.items():
             if sid not in have:
-                session.add(Source(id=sid, type=sid, name=name, team=team, secret_ref=f"{sid}-read-token"))
+                session.add(Source(id=sid, type=sid, name=name, team=team, secret_ref=f"kv://{sid}-read-token"))
                 added["sources"] += 1
         have_p = {p.value for p in (await session.scalars(select(Prefix))).all()}
         for value, desc in DEFAULT_PREFIXES.items():

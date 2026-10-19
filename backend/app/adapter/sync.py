@@ -32,6 +32,7 @@ from app.models.app import (
     Prefix,
     Project,
     Risk,
+    Setting,
     Snapshot,
     Source,
     Sprint,
@@ -69,9 +70,18 @@ def match_prefix(name_in_tracker: str, prefixes: list[str]) -> PrefixMatch:
 
 # -- status mapping ------------------------------------------------------------
 
+APP_STATUSES = ("Not started", "In progress", "Done", "On hold")
+STATUS_MAP_KEY = "status_map"  # app.setting row, saved in Admin → Connections → status mapping
+
+
 class StatusMap:
-    def __init__(self, path: Path) -> None:
-        raw = json.loads(Path(path).read_text())
+    """Tracker status → app status. 'default' applies to every source; a source
+    section overrides it. Matching ignores case."""
+
+    def __init__(self, raw: dict[str, Any] | Path) -> None:
+        if isinstance(raw, Path):
+            raw = json.loads(raw.read_text())
+        self.raw = {k: v for k, v in raw.items() if k != "_help"}
         self._default = {k.lower(): v for k, v in raw.get("default", {}).items()}
         self._by_source = {s: {k.lower(): v for k, v in m.items()}
                            for s, m in raw.items() if s not in ("default", "_help") and isinstance(m, dict)}
@@ -79,6 +89,12 @@ class StatusMap:
     def map(self, source_id: str, status: str) -> str | None:
         key = status.strip().lower()
         return self._by_source.get(source_id, {}).get(key) or self._default.get(key)
+
+
+async def load_status_map(session: AsyncSession, settings: Settings) -> StatusMap:
+    """The mapping saved in Admin, or the file it started from."""
+    row = await session.get(Setting, STATUS_MAP_KEY)
+    return StatusMap(row.value if row is not None else Path(settings.status_map_path))
 
 
 # -- results -------------------------------------------------------------------
@@ -146,13 +162,16 @@ async def sync_source(reader: SourceReader, source: Source, prefixes: list[str],
 
         fetched = []
         failed_keys: set[str] = set()
+        unmapped: set[str] = set()
         for ref, m in matched:
             key = ref["key"]
             try:
                 proj = await reader.call(sid, "get_project", {"key": key})
                 status = status_map.map(sid, proj["status"])
                 if status is None:
-                    res.errors.append(f"{m.code}: status '{proj['status']}' has no mapping. Add it to config/status_map.json")
+                    res.errors.append(f"{m.code}: status '{proj['status']}' has no mapping. "
+                                      "Map it in Admin → Connections → status mapping")
+                    unmapped.add(proj["status"].strip())
                     failed_keys.add(key)
                     continue
                 fetched.append({
@@ -231,6 +250,7 @@ async def sync_source(reader: SourceReader, source: Source, prefixes: list[str],
 
         src = await session.get(Source, sid)
         src.last_sync_at, src.last_good_sync_at, src.last_status, src.last_error = now, now, "ok", None
+        src.unmapped_statuses = sorted(unmapped)
         run = await session.get(SyncRun, run_id)
         run.ended_at, run.projects_read, run.errors_json = datetime.now(UTC), len(fetched), res.errors
         run.result = "ok"
@@ -299,8 +319,8 @@ async def recompute_health(session: AsyncSession, settings: Settings, today: dat
 
 async def sync_all(reader: SourceReader, settings: Settings, today: date, only: str | None = None) -> SyncSummary:
     now = datetime.now(UTC)
-    status_map = StatusMap(settings.status_map_path)
     async with session_scope() as session:
+        status_map = await load_status_map(session, settings)
         sources = (await session.scalars(select(Source).where(Source.enabled.is_(True)).order_by(Source.id))).all()
         prefixes = [p.value for p in (await session.scalars(select(Prefix).where(Prefix.active.is_(True)))).all()]
     if only:

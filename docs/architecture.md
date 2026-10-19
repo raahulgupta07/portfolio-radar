@@ -1,6 +1,6 @@
 # Architecture
 
-Version 3.1 · 19 Oct 2026 · MCP-first · as built
+Version 3.2 · 19 Oct 2026 · MCP-first · as built
 
 Teams keep their own trackers. Everything lands in the **City MCP Gateway** first:
 source data comes in through MCP, and the web app, Radar, other agents and the
@@ -82,12 +82,33 @@ flowchart LR
 | `/jira/mcp`, `/openproject/mcp`, `/multica/mcp` | Same tools on each: `list_projects`, `get_project`, `get_milestones`, `get_sprints`, `get_task_counts`, `get_links`, `get_risks` | service: adapter; human: admin |
 | `/portfolio/mcp` | `get_overview`, `list_projects`, `get_project`, `get_history`, `get_roadmap`, `get_dependencies`, `get_risks`, `get_sync_status` | human: viewer; agent; service: radar-job |
 | `/radar/mcp` | People: `get_conversation`, `ask_radar`, `answer_ask` (approver), `decide_approval` (approver), `list_approvals`, `remember`, `forget`, `dismiss_finding`. Radar: `post_message`, `pending_questions`, `list_asks`, `save_findings` (job), `create_draft`, `list_memory`, `get_findings`, `get_status` | as listed; agents and services can never approve |
-| `/notify/mcp` | `list_ready` (approved, due, not sent), `mark_sent` | service: notifier |
-| `/admin/mcp` | `list_sources`, `test_source`, `run_sync`, `list_prefixes`, `add_prefix`, `set_prefix_active`, `get_settings`, `update_settings`, `get_sync_log`, `get_non_compliant`, `list_tools`, `set_tool_status`, `list_tool_changes`, `decide_tool_change`, `get_audit` | human: admin |
+| `/notify/mcp` | `list_ready` (approved, due, not sent), `mark_sent`, `get_channels` (secret names only) | service: notifier |
+| `/admin/mcp` | `list_sources`, `test_source`, `run_sync`, `list_prefixes`, `add_prefix`, `set_prefix_active`, `get_settings`, `update_settings`, `get_sync_log`, `get_non_compliant`, `list_tools`, `set_tool_status`, `list_tool_changes`, `decide_tool_change`, `get_audit`. Connections: `get_connections`, `get_source`, `save_source`, `set_secret`, `check_source`, `save_status_mapping`, `get_integrations`, `save_integration`, `test_integration`, `list_agents`, `save_agent`, `set_agent_enabled`, `preview_agent` | human: admin |
 | `/omni/mcp` | `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool` (with `projection`) | any caller; shows only what that caller may use |
 | `/system/mcp` | `whoami`, `ping` | any caller |
 
+`/radar/mcp` also has `get_llm_config` (secret name only) for the worker.
+
 Every list tool accepts a `fields` list (projection) so answers stay small.
+
+## Connections set up in the app
+
+Admin → Connections, MCP tools, Agents and Activity are screens over `/admin/mcp`.
+
+- **Secrets:** `set_secret` writes to the secret store (Azure Key Vault in production,
+  a local file in dev) and is write-only: the value is never returned, and the guard
+  writes `[secret]` in the audit log instead of it. Everything else stores only the
+  secret's name (`kv://…`). The gateway and the worker read values from the store.
+- **Sources:** address, JIRA Cloud or Data Center, sign-in method, service account and
+  token name live in `app.source`. The status mapping lives in `app.setting`
+  (`status_map`), starting from `config/status_map.json`; statuses seen without a
+  mapping are listed for the admin, and those projects do not sync until mapped.
+- **Outside services:** SSO, LLM, Teams and email in `app.setting` (`integration.*`).
+  Environment variables apply until an admin saves a value.
+- **Agents:** `mcp.agent` lists apps that sign in with their own Entra app (client
+  credentials), with the servers each may use and its rate limit. The guard enforces
+  both; tool rules still apply, so an agent can never approve or send. Agents and SSO
+  rules are held in memory, refreshed on every change and every 30 seconds.
 
 ## Daily flow
 

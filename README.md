@@ -56,11 +56,33 @@ python -m app.worker
 cd ../web && npm install && cp .env.example .env && npm run dev   # http://localhost:5173
 ```
 
+## Set up connections in the app
+
+Admins set up every connection in **Admin → Connections**, no files to edit:
+
+| Screen | What you set up |
+| --- | --- |
+| Connections | Overview: gateway, the three source trackers, app servers, outside services |
+| Connections → a source | Address, JIRA Cloud or Data Center, sign-in, service account, read token, a full check, status mapping, its tools |
+| Connections → Sign-in, LLM and sending | City SSO (tenant, audience, groups → roles), the LLM for Radar, Teams webhook, SMTP |
+| MCP tools | Turn tools on or off (one by one or per server), review changed tools |
+| Agents | Connect CityGPT, Claude or another agent: Entra app ID, servers it may use, rate limit, "test as this agent" |
+| Activity | The audit log, with filters |
+
+Secrets (tokens, API keys, webhook URLs, passwords) are pasted once. They go
+straight to the secret store and are never shown, returned or logged again; the
+app keeps only their names (`kv://jira-read-token`). Production uses Azure Key
+Vault (`SECRET_STORE=keyvault`, `KEY_VAULT_URL`, managed identity). Dev and test
+use a local file (`backend/.secrets/`, not in git).
+
+Values saved in Admin win over environment variables. Until something is saved,
+the environment variables below still apply.
+
 ## Tools start off
 
 Every MCP tool starts **off**, and a tool whose description, inputs or access rules
 change in code waits for its owner's review (Uber's MCP Gateway pattern). Owners
-use the Admin page (MCP tools section) or the command line:
+use Admin → MCP tools or the command line:
 
 ```bash
 python -m app.mcp.cli tools                               # every tool and its status
@@ -93,12 +115,14 @@ Roles come from City SSO groups (`ENTRA_GROUP_ROLES`), or from sample users in d
 | `SOURCE_MODE=live` + connector settings | backend | Real JIRA / OpenProject / Multica (to build once API access is confirmed) |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | backend | Radar's wording and chat (CityGPT, Azure OpenAI, …). Empty = rule-based |
 | `TEAMS_WEBHOOK_URL`, `SMTP_*`, `NOTIFY_EMAIL_TO` | backend | Sending approved digests and nudges |
+| `SECRET_STORE=keyvault`, `KEY_VAULT_URL` | backend (gateway and worker) | Where secrets pasted in Admin are kept |
+| `MCP_PUBLIC_URL` | web | The gateway address shown to agents in Admin → Agents |
 | `DEV_LOGIN=false`, `APP_ENV=prod` | both | Production: no sample users, no dev tokens |
 
 ## Tests
 
 ```bash
-cd backend && . .venv/bin/activate && pytest       # 80 tests; needs a radar_test database
+cd backend && . .venv/bin/activate && pytest       # 91 tests; needs a radar_test database
 cd web && npm run check && npm run test:e2e        # types; browser tests against a running stack
 ```
 

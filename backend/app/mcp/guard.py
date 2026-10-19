@@ -53,6 +53,8 @@ class Gateway:
         self.limiter = RateLimiter(settings.rate_limit_per_minute)
 
     def _allowed(self, caller: Caller, spec: ToolSpec) -> tuple[bool, str]:
+        if not caller.may_use_server(spec.server):
+            return False, f"This {caller.kind} may not use the {spec.server} server"
         if caller.kind not in spec.callers:
             return False, f"{caller.kind.capitalize()} callers may not use this tool"
         if not caller.has_any_role(spec.roles):
@@ -80,7 +82,7 @@ class Gateway:
         try:
             if spec is None:
                 raise GuardDenied(f"Unknown tool {server}.{tool}")
-            if not self.limiter.allow(caller.id):
+            if not self.limiter.allow(caller.id, caller.rate_limit):
                 raise GuardDenied("Too many requests. Try again in a minute")
             async with session_scope() as session:
                 usable, why = await self.registry.is_usable(session, spec)
@@ -118,6 +120,9 @@ class Gateway:
 
     async def _audit(self, caller: Caller, server: str, tool: str, arguments: dict[str, Any],
                      result: CallResult, started: float) -> None:
+        spec = self.registry.get(server, tool)
+        if spec is not None and spec.secret_args:
+            arguments = {k: ("[secret]" if k in spec.secret_args else v) for k, v in arguments.items()}
         args_text = redact_text(json.dumps(arguments, default=str, sort_keys=True))
         if len(args_text) > self.settings.audit_args_max_chars:
             args_text = args_text[: self.settings.audit_args_max_chars] + "…"

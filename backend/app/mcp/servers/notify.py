@@ -69,3 +69,14 @@ async def mark_sent(args: SentArgs, ctx: ToolContext) -> dict:
                                      body=f"Sent: {a.draft_json.get('title')} ({', '.join(args.channels)})",
                                      payload_json={"approval_id": a.id}))
     return {"approval_id": args.approval_id, "sent": args.ok}
+
+
+@server.tool(callers=CALLERS, roles=ROLES, redact=False)
+async def get_channels(args, ctx: ToolContext) -> dict:
+    """Where approved drafts go (set in Admin → Connections): Teams webhook and SMTP settings, with secrets by name only."""
+    from app import integrations
+
+    async with session_scope() as session:
+        teams, _ = await integrations.load(session, "teams", ctx.settings)
+        email, _ = await integrations.load(session, "email", ctx.settings)
+    return {"teams": teams.model_dump(mode="json"), "email": email.model_dump(mode="json")}

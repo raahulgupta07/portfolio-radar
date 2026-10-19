@@ -58,8 +58,30 @@ test('a question gets an answer with evidence', async ({ page }) => {
 
 test('admin sees the tool registry and audit log', async ({ page }) => {
 	await signIn(page, 'dev-admin');
-	await page.goto('/admin');
-	await expect(page.getByRole('heading', { name: 'MCP tools' })).toBeVisible();
-	await expect(page.getByText('/portfolio/mcp')).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
+	await page.goto('/admin/tools');
+	await expect(page.getByRole('heading', { name: 'MCP tools', exact: true })).toBeVisible();
+	await expect(page.getByText('/portfolio/mcp', { exact: true })).toBeVisible();
+	await page.goto('/admin/activity');
+	await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
+});
+
+test('admin sets up a source from Connections; the token is never shown again', async ({ page }) => {
+	await signIn(page, 'dev-admin');
+	await page.goto('/admin/connections');
+	await expect(page.getByText('City MCP Gateway · running')).toBeVisible();
+	await page.goto('/admin/connections/openproject', { waitUntil: 'networkidle' });
+	await page.fill('input[name=base_url]', 'https://openproject.city.local');
+	await page.fill('input[name=token]', 'e2e-secret-value');
+	await page.getByRole('button', { name: 'Save connection' }).click();
+	await expect(page.getByText(/token is in the secret store as kv:\/\/openproject-read-token/)).toBeVisible();
+	await expect(page.locator('input[name=token]')).toHaveValue('');
+	expect(await page.content()).not.toContain('e2e-secret-value');
+	await page.getByRole('button', { name: 'Run the check' }).click();
+	await expect(page.getByText('Projects found')).toBeVisible();
+});
+
+test('viewers cannot open Connections', async ({ page }) => {
+	await signIn(page, 'dev-viewer');
+	const r = await page.goto('/admin/connections');
+	expect(r?.status()).toBe(403);
 });

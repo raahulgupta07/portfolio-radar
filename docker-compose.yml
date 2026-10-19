@@ -24,7 +24,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
       MCP_ALLOWED_HOSTS: '["127.0.0.1:*","localhost:*","mcp:*"]'
+      SECRET_STORE_PATH: /srv/secrets/dev-secrets.json
     ports: ["8000:8000"]
+    volumes: [devsecrets:/srv/secrets]
     depends_on:
       db: {condition: service_healthy}
     healthcheck:
@@ -43,6 +45,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
       GATEWAY_URL: http://mcp:8000
+      SECRET_STORE_PATH: /srv/secrets/dev-secrets.json
+    volumes: [devsecrets:/srv/secrets:ro]
     depends_on:
       mcp: {condition: service_healthy}
     restart: unless-stopped
@@ -62,3 +66,5 @@ services:
 
 volumes:
   dbdata:
+  # Dev only: secrets pasted in Admin. Production uses Azure Key Vault (SECRET_STORE=keyvault).
+  devsecrets:

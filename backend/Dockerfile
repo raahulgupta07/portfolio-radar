@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /srv/backend
 
 COPY backend/pyproject.toml ./
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[keyvault]"
 
 COPY backend/ ./
 COPY design/sample-data.json /srv/design/sample-data.json

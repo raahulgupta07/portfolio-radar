@@ -53,6 +53,7 @@ class ToolSpec:
     roles: frozenset[str]
     read_only: bool = True
     redact: bool = True
+    secret_args: frozenset[str] = frozenset()  # never written to the audit log
 
     @property
     def key(self) -> str:
@@ -97,6 +98,7 @@ class ServerDef:
         input_model: type[BaseModel] = NoArgs,
         read_only: bool = True,
         redact: bool = True,
+        secret_args: set[str] | frozenset[str] = frozenset(),
         name: str | None = None,
         description: str | None = None,
     ) -> Callable[[Handler], Handler]:
@@ -121,6 +123,7 @@ class ServerDef:
                 roles=frozenset(roles),
                 read_only=read_only,
                 redact=redact,
+                secret_args=frozenset(secret_args),
             )
             return fn
 

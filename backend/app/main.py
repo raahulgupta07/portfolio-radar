@@ -8,6 +8,7 @@ Each registry server is served at /<name>/mcp (Streamable HTTP). /healthz and
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -20,7 +21,8 @@ from sqlalchemy import text
 
 from app.db import get_engine, session_scope
 from app.mcp.guard import Gateway
-from app.mcp.identity import TokenResolver
+from app.mcp import agents
+from app.mcp.identity import Directory, TokenResolver
 from app.mcp.registry import Registry
 from app.mcp.servers import build_registry, build_services
 from app.mcp.transport import RequireToken, build_mcp_server
@@ -33,8 +35,11 @@ def create_app(settings: Settings | None = None, registry: Registry | None = Non
                services: dict[str, Any] | None = None) -> FastAPI:
     settings = settings or get_settings()
     registry = registry or build_registry(settings)
-    gateway = Gateway(registry, settings, services if services is not None else build_services(settings))
-    resolver = TokenResolver(settings)
+    directory = Directory(settings)
+    services = dict(services if services is not None else build_services(settings))
+    services.setdefault("directory", directory)
+    gateway = Gateway(registry, settings, services)
+    resolver = TokenResolver(settings, directory=directory)
     security = TransportSecuritySettings(
         allowed_hosts=settings.mcp_allowed_hosts, allowed_origins=settings.mcp_allowed_origins)
 
@@ -48,10 +53,25 @@ def create_app(settings: Settings | None = None, registry: Registry | None = Non
             log.warning("New tool %s is OFF until its owner turns it on", key)
         for key in report["review"]:
             log.warning("Tool %s changed and waits for owner review", key)
-        async with AsyncExitStack() as stack:
-            for srv in mcp_servers.values():
-                await stack.enter_async_context(srv.session_manager.run())
-            yield
+        await agents.refresh(directory)
+
+        async def keep_fresh() -> None:
+            # Agents and SSO rules saved in Admin on another copy of the gateway.
+            while True:
+                await asyncio.sleep(settings.identity_refresh_seconds)
+                try:
+                    await agents.refresh(directory)
+                except Exception:  # noqa: BLE001  keep the last good rules
+                    log.exception("could not refresh agents and SSO rules")
+
+        refresher = asyncio.create_task(keep_fresh())
+        try:
+            async with AsyncExitStack() as stack:
+                for srv in mcp_servers.values():
+                    await stack.enter_async_context(srv.session_manager.run())
+                yield
+        finally:
+            refresher.cancel()
 
     app = FastAPI(title="City MCP Gateway", version="0.1.0", lifespan=lifespan)
     app.state.gateway = gateway

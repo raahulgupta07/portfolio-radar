@@ -6,8 +6,9 @@ Three kinds of caller, as in Uber's MCP Gateway:
 - service: the adapter or the Notifier
 """
 
+import time
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from app.settings import Settings
 
@@ -20,9 +21,46 @@ class Caller:
     kind: CallerKind
     id: str
     roles: frozenset[str] = field(default_factory=frozenset)
+    # Agents set up in Admin → Agents: the only servers they may use (omni and
+    # system always), and their own rate limit. None = no extra limit.
+    servers: frozenset[str] | None = None
+    rate_limit: int | None = None
 
     def has_any_role(self, roles: frozenset[str]) -> bool:
         return not roles or bool(self.roles & roles)
+
+    def may_use_server(self, server: str) -> bool:
+        return self.servers is None or server in self.servers or server in ("omni", "system")
+
+
+@dataclass(frozen=True)
+class SsoRules:
+    tenant_id: str
+    audience: str
+    default_roles: tuple[str, ...]
+    group_roles: dict[str, tuple[str, ...]]
+
+
+class Directory:
+    """Agents and SSO rules saved in Admin, kept in memory so token checks need
+    no database call. The gateway refreshes it at start-up, after every change
+    in Admin, and every IDENTITY_REFRESH_SECONDS (for other copies)."""
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        self.agents: dict[str, Caller] = {}  # Entra app ID -> caller
+        self.sso = SsoRules(settings.entra_tenant_id, settings.entra_audience, tuple(settings.entra_default_roles),
+                            {g: tuple(r) for g, r in settings.entra_group_roles.items()})
+        self.loaded_at = 0.0
+
+    def set(self, agents: dict[str, Caller], sso: SsoRules) -> None:
+        self.agents, self.sso, self.loaded_at = agents, sso, time.monotonic()
+
+    def app(self, app_id: str) -> Caller | None:
+        spec: dict[str, Any] | None = self.settings.entra_apps.get(app_id)
+        if spec and spec.get("kind") in ("agent", "service"):
+            return Caller(kind=spec["kind"], id=str(spec.get("id", app_id)), roles=frozenset(spec.get("roles", [])))
+        return self.agents.get(app_id)
 
 
 
@@ -36,12 +74,14 @@ class EntraVerifier:
     user's Entra groups (ENTRA_GROUP_ROLES); apps signing in as themselves must
     be listed in ENTRA_APPS."""
 
-    def __init__(self, settings: Settings, jwks_client=None) -> None:
+    def __init__(self, settings: Settings, jwks_client=None, directory: Directory | None = None) -> None:
         import jwt
 
         self._jwt = jwt
         self.settings = settings
-        tenant = settings.entra_tenant_id
+        self.directory = directory or Directory(settings)
+        self.sso = self.directory.sso
+        tenant = self.sso.tenant_id
         self.issuers = {f"https://login.microsoftonline.com/{tenant}/v2.0", f"https://sts.windows.net/{tenant}/"}
         self.jwks = jwks_client or jwt.PyJWKClient(
             f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys", cache_keys=True, lifespan=3600)
@@ -50,7 +90,7 @@ class EntraVerifier:
         jwt = self._jwt
         try:
             key = self.jwks.get_signing_key_from_jwt(token).key
-            claims = jwt.decode(token, key, algorithms=["RS256"], audience=self.settings.entra_audience,
+            claims = jwt.decode(token, key, algorithms=["RS256"], audience=self.sso.audience,
                                 options={"require": ["exp", "iss", "aud"]})
         except jwt.PyJWTError as e:
             raise UnknownToken(f"Token rejected: {type(e).__name__}") from e
@@ -60,14 +100,14 @@ class EntraVerifier:
         if claims.get("idtyp") == "app" or ("scp" not in claims and "oid" in claims and "upn" not in claims
                                             and "preferred_username" not in claims):
             app_id = claims.get("azp") or claims.get("appid") or ""
-            spec = self.settings.entra_apps.get(app_id)
-            if not spec or spec.get("kind") not in ("agent", "service"):
+            caller = self.directory.app(app_id)
+            if caller is None:
                 raise UnknownToken("This app is not allowed to use the gateway")
-            return Caller(kind=spec["kind"], id=str(spec.get("id", app_id)), roles=frozenset(spec.get("roles", [])))
+            return caller
 
-        roles = set(self.settings.entra_default_roles)
+        roles = set(self.sso.default_roles)
         for group in claims.get("groups", []) or []:
-            roles.update(self.settings.entra_group_roles.get(group, []))
+            roles.update(self.sso.group_roles.get(group, ()))
         user_id = claims.get("preferred_username") or claims.get("upn") or claims.get("oid")
         return Caller(kind="human", id=str(user_id), roles=frozenset(roles))
 
@@ -80,8 +120,12 @@ class TokenResolver:
     there is no anonymous access.
     """
 
-    def __init__(self, settings: Settings, entra: "EntraVerifier | None" = None) -> None:
-        self._entra = entra or (EntraVerifier(settings) if settings.entra_tenant_id else None)
+    def __init__(self, settings: Settings, entra: "EntraVerifier | None" = None,
+                 directory: Directory | None = None) -> None:
+        self.settings = settings
+        self.directory = directory or Directory(settings)
+        self._fixed_entra = entra
+        self._entra: EntraVerifier | None = None
         self._dev_tokens: dict[str, Caller] = {}
         if settings.app_env in ("dev", "test"):
             for token, spec in settings.dev_tokens.items():
@@ -97,6 +141,19 @@ class TokenResolver:
         caller = self._dev_tokens.get(token)
         if caller is not None:
             return caller
-        if self._entra is not None and token.count(".") == 2:
-            return self._entra.resolve(token)
+        entra = self._verifier()
+        if entra is not None and token.count(".") == 2:
+            return entra.resolve(token)
         raise UnknownToken("Unknown or expired token")
+
+    def _verifier(self) -> EntraVerifier | None:
+        """City SSO checks, rebuilt when an admin changes the tenant or audience."""
+        if self._fixed_entra is not None:
+            return self._fixed_entra
+        sso = self.directory.sso
+        if not sso.tenant_id or not sso.audience:
+            return None
+        if self._entra is None or self._entra.sso.tenant_id != sso.tenant_id or self._entra.sso.audience != sso.audience:
+            self._entra = EntraVerifier(self.settings, directory=self.directory)
+        self._entra.sso = sso  # group rules apply at once
+        return self._entra

@@ -73,6 +73,15 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] Phone (tab bar, 2×2 tiles, scrolling chips) and iPad (floating menu, narrower panel) layouts
 - [x] 80 backend tests, 6 browser tests (also against the full Docker stack), README
 
+## Phase 12 — Connections set up in the app ✅ (91 backend tests, 8 browser tests)
+
+- [x] Secret store: Azure Key Vault (production) or a local file (dev); app keeps only `kv://` names; `set_secret` is write-only and masked in the audit log
+- [x] Admin tabs: Settings, Connections, MCP tools, Agents, Activity
+- [x] Source set-up: address, Cloud/Data Center, sign-in, service account, token, full check, status mapping (saved in the app), tools
+- [x] Sign-in, LLM and sending: City SSO (applies at once), LLM, Teams, SMTP, each with a test; worker reads them through MCP
+- [x] Agents: Entra app ID, allowed servers, rate limit, on/off, "test as this agent", address snippet; enforced by the guard
+- [ ] "Add a source" for a new tracker type: needs a connector in code first
+
 ## Decisions made
 
 | Date | Decision |
@@ -89,6 +98,8 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | `python -m app.adapter demo` loads sample data with 6 weeks of history (dev only) |
 | 19 Oct 2026 | Agno's own MCP connector needs MCP SDK 1.x; Radar uses plain Agno tools that each call one gateway tool instead |
 | 19 Oct 2026 | Chat is MCP-only: the web app posts the question, the worker answers through MCP, the page picks it up |
+| 19 Oct 2026 | Connections are set up in Admin; secrets go to Key Vault by name only; Admin values win over environment variables |
+| 19 Oct 2026 | Web sign-in (client ID and secret) stays a web-container setting; the gateway side of SSO is set in Admin |
 
 ## Still open (needs input or access)
 

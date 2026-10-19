@@ -431,3 +431,14 @@ async def dismiss_finding(args: DismissArgs, ctx: ToolContext) -> dict:
             raise ToolError("No such finding")
         f.dismissed_by, f.dismissed_at = ctx.caller.id, datetime.now(UTC)
     return {"dismissed": args.finding_id}
+
+
+@server.tool(callers=RADAR_WRITERS, roles=RADAR_ROLES, redact=False)
+async def get_llm_config(args, ctx: ToolContext) -> dict:
+    """Which LLM Radar uses for its words (set in Admin → Connections): address, model and the *name* of the API key
+    secret. Empty address = rule-based answers."""
+    from app import integrations
+
+    async with session_scope() as session:
+        cfg, saved = await integrations.load(session, "llm", ctx.settings)
+    return {**cfg.model_dump(mode="json"), "saved_in_admin": saved}

@@ -5,29 +5,22 @@ import { callTool, clearCache, McpToolError } from '$lib/server/mcp';
 type Any = Record<string, any>;
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user?.roles.includes('admin')) error(403, 'Admin settings are for portfolio admins only.');
 	const t = locals.token!;
 	const call = (tool: string, args: Any = {}) => callTool<Any>(t, 'admin', tool, args, { cache: false });
 	try {
-		const [sources, prefixes, settings, nonCompliant, syncLog, tools, changes, audit] = await Promise.all([
+		const [sources, prefixes, settings, nonCompliant, syncLog] = await Promise.all([
 			call('list_sources'),
 			call('list_prefixes'),
 			call('get_settings'),
 			call('get_non_compliant'),
-			call('get_sync_log', { limit: 12 }),
-			call('list_tools'),
-			call('list_tool_changes'),
-			call('get_audit', { limit: 25 })
+			call('get_sync_log', { limit: 12 })
 		]);
 		return {
 			sources: sources.sources,
 			prefixes: prefixes.prefixes,
 			settings,
 			nonCompliant: nonCompliant.projects,
-			syncLog: syncLog.runs,
-			tools: tools.tools,
-			changes: changes.changes,
-			audit: audit.calls
+			syncLog: syncLog.runs
 		};
 	} catch (e) {
 		if (e instanceof McpToolError) error(403, e.message);
@@ -53,19 +46,8 @@ export const actions: Actions = {
 		run(locals.token!, 'run_sync', {}, (r) =>
 			`Sync done. ${r.sources.map((s: Any) => `${s.source}: ${s.ok ? `${s.projects} projects` : 'failed'}`).join(' · ')}`
 		),
-	syncSource: async ({ locals, request }) => {
-		const source = String((await request.formData()).get('source'));
-		return run(locals.token!, 'run_sync', { source }, (r) => {
-			const s = r.sources[0];
-			return s?.ok ? `${source}: synced ${s.projects} projects.` : `${source}: sync failed. ${s?.errors?.[0] ?? ''}`;
-		});
-	},
-	testSource: async ({ locals, request }) => {
-		const source = String((await request.formData()).get('source'));
-		return run(locals.token!, 'test_source', { source }, (r) =>
-			r.ok ? `${source}: connection works, ${r.projects_found} projects found.` : `${source}: ${r.error}`
-		);
-	},
+
+
 	addPrefix: async ({ locals, request }) => {
 		const f = await request.formData();
 		const value = String(f.get('value') ?? '').trim().toUpperCase();
@@ -121,20 +103,6 @@ export const actions: Actions = {
 				}
 			},
 			() => 'Alert settings saved.'
-		);
-	},
-	toolStatus: async ({ locals, request }) => {
-		const f = await request.formData();
-		const server = String(f.get('server'));
-		const tool = String(f.get('tool'));
-		const status = String(f.get('status'));
-		return run(locals.token!, 'set_tool_status', { server, tool, status }, () => `${server}.${tool} is now ${status}.`);
-	},
-	decideChange: async ({ locals, request }) => {
-		const f = await request.formData();
-		const approve = f.get('approve') === 'true';
-		return run(locals.token!, 'decide_tool_change', { change_id: num(f, 'change_id'), approve }, () =>
-			approve ? 'Change approved. The tool is on.' : 'Change rejected. The tool is off.'
 		);
 	}
 };

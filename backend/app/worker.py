@@ -21,6 +21,8 @@ from app.health import today_in
 from app.radar.assistant import answer_pending
 from app.radar.job import act_on_answers, run_check
 from app.radar.notifier import run_notifier
+from app.radar.runtime import with_channels, with_llm
+from app.secretstore import build_secret_store
 from app.settings import Settings, get_settings
 
 log = logging.getLogger("worker")
@@ -36,7 +38,8 @@ async def nightly(settings: Settings) -> None:
         summary = await sync_all(r, settings, today_in(settings))
     log.info("sync done: %s", summary.as_dict())
     async with reader(settings, settings.radar_token) as r:
-        log.info("radar check: %s", await run_check(r, settings, today_in(settings)))
+        rs = await with_llm(r, settings, build_secret_store(settings))
+        log.info("radar check: %s", await run_check(r, rs, today_in(settings)))
 
 
 async def stale_check(settings: Settings) -> None:
@@ -79,10 +82,11 @@ async def main() -> None:
     scheduler.add_job(stale_check, CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=settings.timezone),
                       args=[settings], id="stale", max_instances=1, coalesce=True)
     scheduler.start()
+    store = build_secret_store(settings)
 
     async def chat() -> None:
         async with reader(settings, settings.radar_agent_token) as r:
-            await answer_pending(r, settings, settings.timezone)
+            await answer_pending(r, await with_llm(r, settings, store), settings.timezone)
 
     async def answers() -> None:
         async with reader(settings, settings.radar_token) as r:
@@ -90,7 +94,7 @@ async def main() -> None:
 
     async def notify() -> None:
         async with reader(settings, settings.notifier_token) as r:
-            await run_notifier(r, settings)
+            await run_notifier(r, await with_channels(r, settings, store))
 
     await asyncio.gather(
         loop("schedule", 300, lambda: schedule_from_admin(scheduler, settings)),

@@ -86,3 +86,24 @@ class McpCall(Base):
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     args: Mapped[str | None] = mapped_column(Text, nullable=True)  # PII removed, shortened
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class McpAgent(Base):
+    """An agent or service that signs in with its own Entra app (client
+    credentials), set up in Admin → Agents. Built-in callers are not here."""
+
+    __tablename__ = "agent"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    caller_id: Mapped[str] = mapped_column(String(64), unique=True)  # shown in the audit log
+    name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(10))  # agent or service
+    app_id: Mapped[str] = mapped_column(String(36), unique=True)  # Entra application (client) ID
+    roles: Mapped[list[str]] = mapped_column(JSON)
+    servers: Mapped[list[str]] = mapped_column(JSON)  # servers it may use; omni and system always
+    rate_limit: Mapped[int] = mapped_column(Integer, default=120)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

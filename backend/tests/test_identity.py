@@ -6,7 +6,7 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from app.mcp.identity import EntraVerifier, TokenResolver, UnknownToken
+from app.mcp.identity import Caller, Directory, EntraVerifier, SsoRules, TokenResolver, UnknownToken
 from tests.conftest import make_settings
 
 TENANT = "11111111-2222-3333-4444-555555555555"
@@ -68,3 +68,21 @@ def test_dev_tokens_do_not_work_in_prod():
     settings = make_settings(app_env="prod")
     with pytest.raises(UnknownToken):
         TokenResolver(settings).resolve("Bearer t-viewer")
+
+
+def test_agents_and_sso_rules_saved_in_admin_apply_without_restart():
+    settings = make_settings(dev_tokens={})
+    directory = Directory(settings)
+    resolver = TokenResolver(settings, directory=directory)
+    with pytest.raises(UnknownToken):  # SSO not set up yet
+        resolver.resolve("Bearer " + token())
+
+    claude = Caller("agent", "claude-for-pmo", frozenset({"agent"}), frozenset({"portfolio"}), 60)
+    directory.set({"app-claude": claude}, SsoRules(TENANT, AUD, ("viewer",), {"g-pmo": ("approver",)}))
+    resolver._verifier().jwks = FakeJwks()
+    assert resolver.resolve("Bearer " + token(groups=["g-pmo"])).roles == {"viewer", "approver"}
+    assert resolver.resolve("Bearer " + token(idtyp="app", azp="app-claude")) == claude
+
+    directory.set({}, directory.sso)  # agent turned off in Admin
+    with pytest.raises(UnknownToken, match="not allowed"):
+        resolver.resolve("Bearer " + token(idtyp="app", azp="app-claude"))
