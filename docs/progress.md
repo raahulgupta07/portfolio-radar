@@ -67,11 +67,11 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] Agno agent with a fixed tool list (each tool wraps one gateway tool) when an LLM is set up; rule-based answers with evidence when not
 - [ ] Teams channel (two-way chat in Teams) — not started; Teams is used for sending approved drafts
 
-## Phase 9–11
+## Phase 9–11 ✅
 
-- [ ] Roadmap, Risks, strategy tags (`get_roadmap`, `get_dependencies`, `get_risks`)
-- [ ] Phone and iPad layouts
-- [ ] Full test pass and README
+- [x] Roadmap (timeline, milestones, today line, dependencies with buffer), Risks (matrix, register incl. sync log and Radar findings, 2030 aspirations with gaps)
+- [x] Phone (tab bar, 2×2 tiles, scrolling chips) and iPad (floating menu, narrower panel) layouts
+- [x] 80 backend tests, 6 browser tests (also against the full Docker stack), README
 
 ## Decisions made
 
@@ -89,6 +89,17 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | `python -m app.adapter demo` loads sample data with 6 weeks of history (dev only) |
 | 19 Oct 2026 | Agno's own MCP connector needs MCP SDK 1.x; Radar uses plain Agno tools that each call one gateway tool instead |
 | 19 Oct 2026 | Chat is MCP-only: the web app posts the question, the worker answers through MCP, the page picks it up |
+
+## Still open (needs input or access)
+
+- [ ] Real JIRA and OpenProject connectors (`SOURCE_MODE=live`) — need hosting details and read-only tokens
+- [ ] Multica connector — need to know its API
+- [ ] City SSO switched on — need the Entra ID app registrations, group IDs for admin and approver
+- [ ] LLM endpoint for Radar's wording and chat (CityGPT, Azure OpenAI or Claude)
+- [ ] Teams webhook and SMTP for sending approved drafts
+- [ ] Two-way Teams chat with Radar
+- [ ] Load test: overview under 3 s with 500 projects
+- [ ] PDF one-pager: today the browser's print to PDF is used
 
 ## Open questions
 

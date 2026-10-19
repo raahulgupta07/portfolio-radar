@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     # Apps signing in as themselves (client credentials): app ID -> {"kind": "agent"|"service", "id": ..., "roles": [...]}
     entra_apps: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
+    # 2030 aspirations (strategy tags). Tags are set in the trackers; this list shows gaps.
+    strategy_aspirations: list[str] = Field(default_factory=lambda: [
+        "Innovative Market Leader", "Benchmark of Excellence", "Employer of Choice",
+        "Preferred Business Partner", "Homegrown Champion"])
+
     # Radar
     radar_token: str = "dev-radar-job"  # the nightly Radar job (service, role radar)
     radar_agent_token: str = "dev-radar"  # the chat agent (agent)

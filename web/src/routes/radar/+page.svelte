@@ -957,5 +957,16 @@
 		.pill-row {
 			margin-left: 0;
 		}
+		.sugg {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			padding-bottom: 2px;
+		}
+		.chipq {
+			flex-shrink: 0;
+		}
+		header {
+			padding: 14px 16px;
+		}
 	}
 </style>

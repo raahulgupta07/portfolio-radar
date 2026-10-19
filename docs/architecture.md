@@ -1,6 +1,6 @@
 # Architecture
 
-Version 3 · 19 Oct 2026 · MCP-first
+Version 3.1 · 19 Oct 2026 · MCP-first · as built
 
 Teams keep their own trackers. Everything lands in the **City MCP Gateway** first:
 source data comes in through MCP, and the web app, Radar, other agents and the
@@ -80,12 +80,12 @@ flowchart LR
 | Server | Tools | Who may call |
 | --- | --- | --- |
 | `/jira/mcp`, `/openproject/mcp`, `/multica/mcp` | Same tools on each: `list_projects`, `get_project`, `get_milestones`, `get_sprints`, `get_task_counts`, `get_links`, `get_risks` | service: adapter; human: admin |
-| `/system/mcp` | `whoami`, `ping` (connection checks) | any caller |
-| `/portfolio/mcp` | `get_overview`, `list_projects`, `get_project`, `get_history`, `get_roadmap`, `get_dependencies`, `get_risks`, `get_sync_status` | human: viewer; agent |
-| `/radar/mcp` | `get_conversation`, `post_message`, `get_findings`, `save_findings`, `create_draft`, `decide_approval`, `remember`, `forget` | human: chat, approver decides; agent: drafts only; service: Radar run |
-| `/admin/mcp` | `list_sources`, `set_prefixes`, `set_schedule`, `run_sync`, `get_sync_log`, `get_non_compliant`, `set_tool_status` | human: admin |
-| `/notify/mcp` | `list_approved`, `mark_sent`, `list_alerts` | service: Notifier |
-| `/omni/mcp` | `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool` (with `_projection`) | agent: CityGPT, Claude, other City agents |
+| `/portfolio/mcp` | `get_overview`, `list_projects`, `get_project`, `get_history`, `get_roadmap`, `get_dependencies`, `get_risks`, `get_sync_status` | human: viewer; agent; service: radar-job |
+| `/radar/mcp` | People: `get_conversation`, `ask_radar`, `answer_ask` (approver), `decide_approval` (approver), `list_approvals`, `remember`, `forget`, `dismiss_finding`. Radar: `post_message`, `pending_questions`, `list_asks`, `save_findings` (job), `create_draft`, `list_memory`, `get_findings`, `get_status` | as listed; agents and services can never approve |
+| `/notify/mcp` | `list_ready` (approved, due, not sent), `mark_sent` | service: notifier |
+| `/admin/mcp` | `list_sources`, `test_source`, `run_sync`, `list_prefixes`, `add_prefix`, `set_prefix_active`, `get_settings`, `update_settings`, `get_sync_log`, `get_non_compliant`, `list_tools`, `set_tool_status`, `list_tool_changes`, `decide_tool_change`, `get_audit` | human: admin |
+| `/omni/mcp` | `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool` (with `projection`) | any caller; shows only what that caller may use |
+| `/system/mcp` | `whoami`, `ping` | any caller |
 
 Every list tool accepts a `fields` list (projection) so answers stay small.
 
@@ -107,7 +107,7 @@ Every step is an MCP call through the guard.
 | --- | --- |
 | MCP gateway | Official Python MCP SDK, Streamable HTTP, inside FastAPI |
 | Connectors | httpx, GET only (JIRA REST v2/v3 + Agile API, OpenProject API v3) |
-| Agent | Agno 2.5, as an MCP client |
+| Agent | Agno 2.9 with a fixed list of tools, each calling one gateway tool (Agno's own MCP connector needs MCP SDK 1.x) |
 | LLM | OpenAI-compatible client; endpoint to confirm (CityGPT, Azure OpenAI or Claude) |
 | Database | PostgreSQL 16, SQLAlchemy 2, Alembic |
 | Schedules | APScheduler |

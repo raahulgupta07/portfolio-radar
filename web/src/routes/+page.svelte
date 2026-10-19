@@ -575,6 +575,17 @@
 		h1 {
 			font-size: 34px;
 		}
+		.tiles {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+		.tile {
+			padding: 16px 18px;
+			border-radius: 24px;
+		}
+		.num {
+			font-size: 32px;
+		}
 		.search {
 			width: 100%;
 		}

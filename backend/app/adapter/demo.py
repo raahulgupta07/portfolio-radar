@@ -14,7 +14,7 @@ Everything here is sample data. Never run it against a real database.
 
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.adapter.readers import GatewayReader
@@ -47,9 +47,16 @@ async def _enable_all_tools(registry) -> None:
                 await registry.set_status(session, name, tool, "on", by="demo set-up")
 
 
-async def load_demo(settings: Settings, today: date) -> dict:
+RESET_SQL = ("TRUNCATE app.source, app.prefix, app.agent_run, app.setting, app.radar_message, app.approval, "
+             "app.radar_memory RESTART IDENTITY CASCADE")
+
+
+async def load_demo(settings: Settings, today: date, reset: bool = False) -> dict:
     if settings.app_env == "prod" or settings.source_mode != "mock":
         raise SystemExit("Demo data is only for dev with SOURCE_MODE=mock")
+    if reset:
+        async with session_scope() as session:
+            await session.execute(text(RESET_SQL))
     await seed()
     sample = load_sample(settings.sample_data_path)
     registry = build_registry(settings)

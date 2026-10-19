@@ -1,42 +1,26 @@
-# sv
+# Portfolio Radar — web app
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit + Svelte 5 + Tailwind 4, built from `design/screens/` and the tokens in
+`docs/design-system.md`.
 
-## Creating a project
+The web app has no API or database of its own. Every page loads and acts through
+the City MCP Gateway as an MCP client, with the signed-in user's token
+(`src/lib/server/mcp.ts`). The browser never talks to the gateway.
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
+```bash
+npm install
+cp .env.example .env      # GATEWAY_URL, sign-in settings
+npm run dev               # http://localhost:5173
+npm run check             # types
+npm run test:e2e          # browser tests against a running stack with demo data
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.15.4 create --template minimal --types ts --no-install web
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+| Route | Screen |
+| --- | --- |
+| `/` | Portfolio overview |
+| `/projects`, `/projects/[code]` | Project list, project detail |
+| `/radar` | Conversation with Radar |
+| `/roadmap`, `/risks` | Roadmap; risks and strategy |
+| `/admin` | Admin (admins only) |
+| `/login`, `/auth/callback` | City SSO (Entra ID); sample users when `DEV_LOGIN=true` |
+| `/export/projects.csv` | Excel/CSV export |

@@ -331,35 +331,97 @@ def risk_row(s: PortfolioData, r: Risk) -> dict[str, Any]:
             "project": {"code": p.code, "short": short_code(p), "name": p.name, "health": p.health} if p else None}
 
 
-async def risks(session: AsyncSession, code: str | None) -> dict[str, Any]:
+LEVEL = {"Low": 1, "Medium": 2, "High": 3}
+# How Radar's findings show up in the risk register: (likelihood, impact, found in).
+FINDING_RISK = {
+    "health": ("High", "High", "Radar check"),
+    "sync": ("High", "Medium", "Sync log"),
+    "slipping": ("Medium", "Medium", "Radar check"),
+    "stale": ("Medium", "Low", "Radar check"),
+    "data": ("Medium", "Low", "Radar check"),
+}
+
+
+async def risks(session: AsyncSession, code: str | None, aspirations: list[str] | None = None) -> dict[str, Any]:
     s = await PortfolioData.load(session)
-    rows = [risk_row(s, r) for r in s.risks if not code or (r.project_id and s.by_id[r.project_id].code == code.upper())]
-    matrix = {li: {im: 0 for im in LIKELIHOOD} for li in LIKELIHOOD}
+    rows = [{**risk_row(s, r), "found_in": f"{s.sources[s.by_id[r.project_id].source_id].name} risk"
+             if r.project_id and r.project_id in s.by_id else "Tracker"}
+            for r in s.risks if not code or (r.project_id and s.by_id[r.project_id].code == code.upper())]
+
+    # Risks Radar found that no tracker records yet (one per project and type).
+    run = await session.scalar(select(AgentRun).where(AgentRun.ended_at.is_not(None)).order_by(AgentRun.id.desc()))
+    if run is not None:
+        tracked = {r["project"]["code"] for r in rows if r["project"]}
+        findings = (await session.scalars(select(Finding).where(Finding.run_id == run.id,
+                                                                Finding.dismissed_at.is_(None)))).all()
+        seen: set[tuple] = set()
+        for f in findings:
+            if f.type not in FINDING_RISK:
+                continue
+            p = s.by_id.get(f.project_id) if f.project_id else None
+            if code and (not p or p.code != code.upper()):
+                continue
+            key = (f.type, f.project_id)
+            if key in seen or (p and p.code in tracked and f.type in ("health", "slipping")):
+                continue
+            seen.add(key)
+            likelihood, impact, found = FINDING_RISK[f.type]
+            source_id = (f.evidence_json or {}).get("source")
+            n = sum(1 for x in s.projects if x.source_id == source_id) if f.type == "sync" else 0
+            rows.append({"id": f"F{f.id}", "title": f.text, "detail": (f.evidence_json or {}).get("detail"),
+                         "likelihood": likelihood, "impact": impact, "owner": p.owner if p else "Portfolio admin",
+                         "origin": "radar", "found_in": found, "review_date": None,
+                         "project": {"code": p.code, "short": short_code(p), "name": p.name, "health": p.health} if p
+                         else None, "projects_label": f"{n} {s.sources[source_id].name} projects" if n else None})
+
+    rows.sort(key=lambda r: -(LEVEL.get(r["likelihood"], 0) * LEVEL.get(r["impact"], 0)))
+    matrix = {li: {im: [] for im in LIKELIHOOD} for li in LIKELIHOOD}
     for r in rows:
         if r["likelihood"] in matrix and r["impact"] in matrix[r["likelihood"]]:
-            matrix[r["likelihood"]][r["impact"]] += 1
-    strategy: dict[str, dict[str, Any]] = {}
+            label = r["project"]["short"] if r["project"] else (r.get("projects_label") or "")
+            matrix[r["likelihood"]][r["impact"]].append({"id": r["id"], "label": f"{r['id']} {label}".strip()})
+
+    strategy: dict[str, dict[str, Any]] = {a: {"tag": a, "projects": 0, "pcts": []} for a in (aspirations or [])}
     for p in s.projects:
         tag = p.strategy_tag or "Not tagged"
-        e = strategy.setdefault(tag, {"tag": tag, "projects": 0, **{h: 0 for h in HEALTH_ORDER}})
+        e = strategy.setdefault(tag, {"tag": tag, "projects": 0, "pcts": []})
         e["projects"] += 1
-        if p.health in HEALTH_ORDER:
-            e[p.health] += 1
-    return {"count": len(rows), "risks": rows, "matrix": matrix,
-            "strategy": sorted(strategy.values(), key=lambda e: -e["projects"])}
+        if p.percent_done is not None:
+            e["pcts"].append(p.percent_done)
+    out = []
+    for e in strategy.values():
+        pcts = e.pop("pcts")
+        out.append({**e, "avg_percent_done": round(sum(pcts) / len(pcts)) if pcts else None, "gap": e["projects"] == 0})
+    out.sort(key=lambda e: -e["projects"])
+    return {"count": len(rows), "risks": rows, "matrix": matrix, "strategy": out,
+            "max_projects": max((e["projects"] for e in out), default=0)}
 
 
-async def dependencies(session: AsyncSession, code: str | None) -> dict[str, Any]:
+async def dependencies(session: AsyncSession, code: str | None, today: date | None = None) -> dict[str, Any]:
     s = await PortfolioData.load(session)
     out = []
     for d in s.deps:
         a, b = s.by_id.get(d.from_project_id), s.by_id.get(d.to_project_id)
         if not a or not b or (code and code.upper() not in (a.code, b.code)):
             continue
-        out.append({"from": {"code": a.code, "short": short_code(a), "name": a.name, "health": a.health},
-                    "to": {"code": b.code, "short": short_code(b), "name": b.name, "health": b.health},
-                    "kind": d.kind, "origin": d.origin,
-                    "at_risk": a.health == OFF_TRACK})
+        am, bm = s.next_milestone(a), s.next_milestone(b)
+        note = None
+        if a.health == OFF_TRACK and am and am.due_date and today and am.due_date < today:
+            note = (f"The first step is {(today - am.due_date).days} days late, so the "
+                    f"{bm.name.lower() if bm else 'next'} date is at risk until it is done.")
+        elif am and bm and am.due_date and bm.due_date:
+            buffer = (bm.due_date - am.due_date).days
+            note = f"{b.name} needs {a.name}. {buffer} days of buffer." if buffer >= 0 else \
+                f"{b.name} is due before {a.name}'s step. Check the plan."
+
+        def side(p: Project, m: Milestone | None) -> dict[str, Any]:
+            return {"code": p.code, "short": short_code(p), "name": p.name, "health": p.health,
+                    "milestone": m.name if m else None, "due": _iso(m.due_date) if m else None,
+                    "percent_done": p.percent_done}
+
+        out.append({"from": side(a, am), "to": side(b, bm), "kind": d.kind, "origin": d.origin,
+                    "blocked": a.health == OFF_TRACK, "note": note})
+    out.sort(key=lambda x: not x["blocked"])
     return {"count": len(out), "dependencies": out}
 
 
@@ -367,7 +429,7 @@ async def roadmap(session: AsyncSession, today: date) -> dict[str, Any]:
     s = await PortfolioData.load(session)
     starts = [p.start_date for p in s.projects if p.start_date]
     ends = [p.end_date for p in s.projects if p.end_date]
-    deps = await dependencies(session, None)
+    deps = await dependencies(session, None, today)
     return {
         "today": today.isoformat(),
         "window": {"start": _iso(min(starts)) if starts else None, "end": _iso(max(ends)) if ends else None},

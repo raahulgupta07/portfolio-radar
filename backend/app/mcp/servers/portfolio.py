@@ -95,14 +95,14 @@ async def get_roadmap(args, ctx: ToolContext) -> dict:
 async def get_dependencies(args: OptionalCode, ctx: ToolContext) -> dict:
     """'Blocks' links between projects, from tracker links and PMO records, for all projects or one."""
     async with session_scope() as session:
-        return await queries.dependencies(session, args.code)
+        return await queries.dependencies(session, args.code, today_in(ctx.settings))
 
 
 @server.tool(callers=CALLERS, roles=ROLES, input_model=OptionalCode)
 async def get_risks(args: OptionalCode, ctx: ToolContext) -> dict:
     """Risk register with likelihood and impact, a likelihood × impact matrix, and health by 2030 strategy tag."""
     async with session_scope() as session:
-        return await queries.risks(session, args.code)
+        return await queries.risks(session, args.code, ctx.settings.strategy_aspirations)
 
 
 @server.tool(callers=CALLERS, roles=ROLES)

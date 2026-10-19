@@ -85,7 +85,13 @@ async def test_roadmap_risks_dependencies(gw):
     assert road["today"] == "2026-10-19" and len(road["projects"]) == 10
     assert len(road["dependencies"]) == 3
     risks = await ok(gw, VIEWER, "portfolio", "get_risks")
-    assert risks["matrix"]["High"]["High"] >= 1
+    assert [c["label"] for c in risks["matrix"]["High"]["High"]] == ["R5 POS03"]
+    assert risks["risks"][0]["title"] == "Vendor contract delayed"  # sorted by score
+    gaps = {e["tag"] for e in risks["strategy"] if e["gap"]}
+    assert gaps == {"Preferred Business Partner", "Homegrown Champion"}
+    deps = (await ok(gw, VIEWER, "portfolio", "get_dependencies"))["dependencies"]
+    assert deps[0]["blocked"] and "4 days late" in deps[0]["note"]
+    assert "days of buffer" in deps[1]["note"]
     assert any(e["tag"] == "Innovative Market Leader" for e in risks["strategy"])
 
 

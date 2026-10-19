@@ -4,7 +4,7 @@
     python -m app.adapter sync                  sync now, through the gateway over MCP/HTTP
     python -m app.adapter sync --source jira    one source only
     python -m app.adapter sync --in-process     no running gateway needed (dev); the guard still runs
-    python -m app.adapter demo                  dev only: sample data with history (see app/adapter/demo.py)
+    python -m app.adapter demo [--reset]        dev only: sample data with history (see app/adapter/demo.py)
 """
 
 import argparse
@@ -26,7 +26,8 @@ async def main() -> None:
     p = argparse.ArgumentParser(prog="python -m app.adapter")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("seed")
-    sub.add_parser("demo")
+    d = sub.add_parser("demo")
+    d.add_argument("--reset", action="store_true", help="empty the portfolio tables first (dev only)")
     s = sub.add_parser("sync")
     s.add_argument("--source")
     s.add_argument("--in-process", action="store_true")
@@ -39,7 +40,7 @@ async def main() -> None:
 
     today = today_in(settings)
     if args.cmd == "demo":
-        print(json.dumps(await load_demo(settings, today), indent=2))
+        print(json.dumps(await load_demo(settings, today, args.reset), indent=2))
         return
     if args.in_process:
         registry = build_registry(settings)
