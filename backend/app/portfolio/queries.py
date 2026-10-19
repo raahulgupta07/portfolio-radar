@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.health import AT_RISK, DONE, LABELS, OFF_TRACK, ON_TRACK
@@ -54,9 +54,10 @@ class PortfolioData:
         self.deps: list[Dependency] = []
         self.risks: list[Risk] = []
         self.by_id: dict[int, Project] = {}
+        self.last_week: dict[int, str | None] = {}
 
     @classmethod
-    async def load(cls, session: AsyncSession) -> PortfolioData:
+    async def load(cls, session: AsyncSession, today: date | None = None) -> PortfolioData:
         s = cls()
         s.projects = list((await session.scalars(select(Project).order_by(Project.code, Project.source_id))).all())
         s.by_id = {p.id: p for p in s.projects}
@@ -68,6 +69,11 @@ class PortfolioData:
         s.tasks = {t.project_id: t for t in (await session.scalars(select(TaskSummary))).all()}
         s.deps = list((await session.scalars(select(Dependency))).all())
         s.risks = list((await session.scalars(select(Risk).order_by(Risk.id))).all())
+        if today is not None:
+            week_day = await session.scalar(select(func.max(Snapshot.date)).where(Snapshot.date <= today - timedelta(days=7)))
+            if week_day:
+                rows = (await session.scalars(select(Snapshot).where(Snapshot.date == week_day))).all()
+                s.last_week = {r.project_id: r.health for r in rows}
         return s
 
     def stale(self, p: Project) -> bool:
@@ -95,6 +101,8 @@ def _source_info(src: Source | None) -> dict[str, Any]:
 
 def project_row(s: PortfolioData, p: Project) -> dict[str, Any]:
     nm = s.next_milestone(p)
+    open_ms = [m for m in s.milestones[p.id] if m.status != "done"]
+    sprint = next((sp for sp in reversed(s.sprints[p.id]) if sp.state == "active"), None)
     return {
         "code": p.code, "short": short_code(p), "name": p.name, "health": p.health,
         "health_label": LABELS.get(p.health or "", "Unknown"), "health_reasons": p.health_reasons or [],
@@ -105,6 +113,13 @@ def project_row(s: PortfolioData, p: Project) -> dict[str, Any]:
         "strategy": p.strategy_tag, "prefix": p.prefix, "updated": _iso(p.source_updated_at),
         "synced_at": _iso(p.synced_at), "source_url": p.source_url,
         "start_date": _iso(p.start_date), "end_date": _iso(p.end_date),
+        "milestones": len(s.milestones[p.id]),
+        "milestones_without_date": sum(1 for m in open_ms if m.due_date is None),
+        "active_sprint": sprint.name if sprint else None,
+        "sprint_goal": (sprint.goal or None) if sprint else None,
+        "health_last_week": s.last_week.get(p.id),
+        "waits_for": [short_code(w) for w in s.waits_for(p)],
+        "blocks": [short_code(b) for b in s.blocks(p)],
     }
 
 
@@ -129,8 +144,8 @@ def _on_or_before(days: dict[date, Any], target: date) -> date | None:
     return max(earlier) if earlier else None
 
 
-async def list_projects(session: AsyncSession, filters: dict[str, Any]) -> dict[str, Any]:
-    s = await PortfolioData.load(session)
+async def list_projects(session: AsyncSession, filters: dict[str, Any], today: date | None = None) -> dict[str, Any]:
+    s = await PortfolioData.load(session, today)
     rows = [project_row(s, p) for p in s.projects]
     shown = [r for r in rows if matches(r, filters)]
     return {"total": len(rows), "count": len(shown), "projects": shown}
@@ -150,7 +165,7 @@ async def latest_radar(session: AsyncSession) -> dict[str, Any]:
 
 
 async def overview(session: AsyncSession, today: date) -> dict[str, Any]:
-    s = await PortfolioData.load(session)
+    s = await PortfolioData.load(session, today)
     rows = [project_row(s, p) for p in s.projects]
     snaps = await _snapshots(session, today - timedelta(days=42))
     last_week_day = _on_or_before(snaps, today - timedelta(days=7))
@@ -253,7 +268,7 @@ def _changes(today_snap: Snapshot | None, week_snap: Snapshot | None, sprints: l
 
 
 async def project_detail(session: AsyncSession, code: str, today: date) -> dict[str, Any] | None:
-    s = await PortfolioData.load(session)
+    s = await PortfolioData.load(session, today)
     matches_ = [p for p in s.projects if p.code == code.upper()]
     if not matches_:
         return None

@@ -22,12 +22,18 @@ DEV_TOKENS = {
     "t-admin": {"kind": "human", "id": "admin@cityholdings.dev", "roles": ["viewer", "admin"]},
     "t-radar": {"kind": "agent", "id": "radar", "roles": ["agent"]},
     "t-adapter": {"kind": "service", "id": "adapter", "roles": ["adapter"]},
+    "t-approver": {"kind": "human", "id": "pmo@cityholdings.dev", "roles": ["viewer", "approver"]},
+    "t-radar-job": {"kind": "service", "id": "radar-job", "roles": ["radar"]},
+    "t-notifier": {"kind": "service", "id": "notifier", "roles": ["notifier"]},
 }
 
 VIEWER = Caller("human", "viewer@cityholdings.dev", frozenset({"viewer"}))
 ADMIN = Caller("human", "admin@cityholdings.dev", frozenset({"viewer", "admin"}))
 RADAR = Caller("agent", "radar", frozenset({"agent"}))
 ADAPTER = Caller("service", "adapter", frozenset({"adapter"}))
+APPROVER = Caller("human", "pmo@cityholdings.dev", frozenset({"viewer", "approver"}))
+RADAR_JOB = Caller("service", "radar-job", frozenset({"radar"}))
+NOTIFIER = Caller("service", "notifier", frozenset({"notifier"}))
 
 
 def make_settings(**overrides) -> Settings:

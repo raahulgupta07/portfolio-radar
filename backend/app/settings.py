@@ -52,6 +52,24 @@ class Settings(BaseSettings):
     # Apps signing in as themselves (client credentials): app ID -> {"kind": "agent"|"service", "id": ..., "roles": [...]}
     entra_apps: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
+    # Radar
+    radar_token: str = "dev-radar-job"  # the nightly Radar job (service, role radar)
+    radar_agent_token: str = "dev-radar"  # the chat agent (agent)
+    notifier_token: str = "dev-notifier"
+    # LLM for Radar's words (OpenAI-compatible: CityGPT, Azure OpenAI, or a proxy). Empty = rule-based answers.
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
+
+    # Notifier channels. Empty = not set up (dev writes to the log instead).
+    teams_webhook_url: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "portfolio-radar@cityholdings.com.mm"
+    notify_email_to: list[str] = Field(default_factory=list)
+
     rate_limit_per_minute: int = 120
     # Seconds a tool's on/off status is cached before re-reading the registry.
     registry_cache_seconds: float = 5.0

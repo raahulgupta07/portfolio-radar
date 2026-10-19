@@ -51,21 +51,21 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] City SSO (Entra ID, code flow with PKCE) in the web app; gateway checks Entra tokens (signature, issuer, audience, expiry) and maps groups to roles; dev sign-in only when DEV_LOGIN=true
 - [x] Read results cached per user (60 s); one `get_overview` call per page. Load test with 500 projects still to do
 
-## Phase 6 — Radar Checker
+## Phase 6 — Radar Checker ✅
 
-- [ ] `/radar/mcp`: conversation, findings, `save_findings`
-- [ ] Rule checks after sync (02:10); run log
-- [ ] Radar screen with findings and questions
+- [x] `/radar/mcp`: conversation (per person, everyone, approvers), findings with first-seen, asks, memory, status and mood
+- [x] Rule checks right after the nightly sync: off track, slipping, sync, stale work, no owner, no milestone dates, no sprint goal, got worse this week; run log
+- [x] Radar screen as designed: waiting bar, cards (health, findings, dependency, Radar asks, approval), composer, side panel
 
-## Phase 7 — Radar Reporter
+## Phase 7 — Radar Reporter ✅
 
-- [ ] `create_draft`, `decide_approval` (human approver only), `/notify/mcp`, Notifier
-- [ ] Weekly digest, nudges, alerts; approval log
+- [x] `create_draft` (agents and the Radar job), `decide_approval` (human approvers only, with edit), `/notify/mcp`, Notifier (Teams webhook, SMTP; dev outbox)
+- [x] Weekly digest (decisions first, sent at the digest time after approval), nudges after an approver says yes; approval log. External alerts follow the same draft-and-approve path
 
-## Phase 8 — Radar Assistant
+## Phase 8 — Radar Assistant ✅ (Teams chat open)
 
-- [ ] Agno agent answers questions with evidence, as MCP client
-- [ ] Teams channel
+- [x] Agno agent with a fixed tool list (each tool wraps one gateway tool) when an LLM is set up; rule-based answers with evidence when not
+- [ ] Teams channel (two-way chat in Teams) — not started; Teams is used for sending approved drafts
 
 ## Phase 9–11
 
@@ -87,6 +87,8 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | Sample data now has placeholder owners (`<team> lead (sample)`); Agent Ops Console has none, as in the designs |
 | 19 Oct 2026 | Unknown tracker status stops that project syncing and is logged (no guessing); mapping in `backend/config/status_map.json` |
 | 19 Oct 2026 | `python -m app.adapter demo` loads sample data with 6 weeks of history (dev only) |
+| 19 Oct 2026 | Agno's own MCP connector needs MCP SDK 1.x; Radar uses plain Agno tools that each call one gateway tool instead |
+| 19 Oct 2026 | Chat is MCP-only: the web app posts the question, the worker answers through MCP, the page picks it up |
 
 ## Open questions
 

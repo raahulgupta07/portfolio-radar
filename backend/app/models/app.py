@@ -212,11 +212,17 @@ class Finding(Base):
 
 
 class RadarMessage(Base):
+    """One continuous conversation per user. `user_id` is a person's id, or an
+    audience: "*" (everyone) or "role:approver" (people with that role)."""
+
     __tablename__ = "radar_message"
     __table_args__ = {"schema": SCHEMA}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[str] = mapped_column(String(200), index=True)
+    # For a person's question: pending until Radar answers, then answered.
+    state: Mapped[str | None] = mapped_column(String(12), nullable=True, index=True)
+    reply_to: Mapped[int | None] = mapped_column(Integer, nullable=True)
     kind: Mapped[str] = mapped_column(String(16))  # radar, me, ask, approval, pill, health, findings, dep
     body: Mapped[str] = mapped_column(Text, default="")
     mood: Mapped[str | None] = mapped_column(String(16), nullable=True)

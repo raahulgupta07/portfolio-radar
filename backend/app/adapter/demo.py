@@ -7,6 +7,7 @@
    something to show. POS03 was At risk last week and turned Off track this week.
 3. Run today's normal sync: Multica fails (expired token) and shows as stale.
 4. Turn every MCP tool on (dev only; in production owners do this one by one).
+5. Run Radar's first check, and draft this week's digest so approval can be tried.
 
 Everything here is sample data. Never run it against a real database.
 """
@@ -26,9 +27,12 @@ from app.mcp.guard import Gateway
 from app.mcp.identity import Caller
 from app.mcp.servers import build_registry
 from app.models.app import Project, Snapshot, Source
+from app.models.mcp import McpToolChange
+from app.radar.job import run_check
 from app.settings import Settings
 
 ADAPTER = Caller("service", "adapter", frozenset({"adapter"}))
+RADAR_JOB = Caller("service", "radar-job", frozenset({"radar"}))
 
 
 async def _enable_all_tools(registry) -> None:
@@ -36,6 +40,8 @@ async def _enable_all_tools(registry) -> None:
     each owner turns on their own tools."""
     async with session_scope() as session:
         await registry.sync(session)
+        for change in (await session.scalars(select(McpToolChange).where(McpToolChange.status == "pending"))).all():
+            await registry.decide_change(session, change.id, approve=True, by="demo set-up")
         for name, server in registry.servers.items():
             for tool in server.tools:
                 await registry.set_status(session, name, tool, "on", by="demo set-up")
@@ -78,9 +84,12 @@ async def load_demo(settings: Settings, today: date) -> dict:
                     percent_done=round((p.percent_done or 0) * scale), detail=detail,
                 ).on_conflict_do_nothing())
 
-    real = await sync_all(GatewayReader(Gateway(registry, settings, {"connectors": {
-        sid: MockConnector(sid, settings.sample_data_path) for sid in SOURCES}}), ADAPTER), settings, today)
-    return real.as_dict()
+    gateway = Gateway(registry, settings, {"connectors": {
+        sid: MockConnector(sid, settings.sample_data_path) for sid in SOURCES}})
+    real = await sync_all(GatewayReader(gateway, ADAPTER), settings, today)
+    # Radar's first check, with this week's digest drafted so the approval flow can be tried.
+    radar = await run_check(GatewayReader(gateway, RADAR_JOB), settings, today, force_digest=True)
+    return {**real.as_dict(), "radar": radar}
 
 
 def _past_health(p: Project, week: date, last_week: date) -> str | None:

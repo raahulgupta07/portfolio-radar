@@ -15,6 +15,8 @@ dependencies = [
     "httpx>=0.27,<1",
     "apscheduler>=3.11,<4",
     "pyjwt[crypto]>=2.9,<3",
+    "agno>=2.5,<3",
+    "openai>=1.40",
 ]
 
 [project.optional-dependencies]

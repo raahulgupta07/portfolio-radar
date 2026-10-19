@@ -20,8 +20,8 @@ server = ServerDef(
     direction="out",
 )
 
-CALLERS = {"human", "agent"}
-ROLES = {"viewer", "agent"}
+CALLERS = {"human", "agent", "service"}
+ROLES = {"viewer", "agent", "radar"}  # people, agents, and the nightly Radar job
 
 Health = Literal["on_track", "at_risk", "off_track", "done"]
 
@@ -60,7 +60,7 @@ async def list_projects(args: ProjectFilter, ctx: ToolContext) -> dict:
     """List projects with health, source, status, progress, next milestone and strategy.
     Filter by health, source, prefix, team or status, or search by code or name."""
     async with session_scope() as session:
-        return await queries.list_projects(session, args.model_dump())
+        return await queries.list_projects(session, args.model_dump(), today_in(ctx.settings))
 
 
 @server.tool(callers=CALLERS, roles=ROLES, input_model=Code)
