@@ -22,11 +22,11 @@ flowchart LR
 | Resource | Name | Notes |
 |---|---|---|
 | Container Apps environment | `cae-radar` | In its own VNet subnet; logs to Log Analytics (90 days) |
-| Gateway | `ca-radar-mcp` | Internal only by default. Runs migrations at start. One copy |
+| Gateway | `ca-radar-mcp` | Internal only by default, https even inside. Runs migrations at start. One copy. Accepts person tokens only from the web app (`ENTRA_USER_APPS`) |
 | Worker | `ca-radar-worker` | No ingress. Exactly one copy (it holds the nightly schedule) |
 | Web app | `ca-radar-web` | Public HTTPS; optional IP allow-list. 1–3 copies |
 | PostgreSQL Flexible Server 16 | `pg-radar-…` | Private (VNet only), TLS required, 14-day backups |
-| Key Vault | `kv-radar-…` | RBAC, soft delete and purge protection. Holds `database-url`, the web client secret, and every token pasted in Admin |
+| Key Vaults | `kv-radar-…`, `kva-radar-…` | RBAC, soft delete, purge protection, private endpoints only. `kv-` holds the database URL and web client secret; `kva-` holds tokens pasted in Admin |
 | Container Registry | `acrradar…` | No admin user; apps pull with their identities |
 | Managed identities | `id-radar-*` | One each for the gateway, worker and web, plus one per worker job |
 
@@ -34,9 +34,9 @@ Who may do what:
 
 | Identity | Registry | Key Vault | Gateway caller |
 |---|---|---|---|
-| gateway | pull | read and write secrets (Admin saves tokens) | – |
-| worker | pull | read secrets (LLM key, Teams webhook, SMTP password, database URL) | – |
-| web | pull | read secrets (its client secret) | – |
+| gateway | pull | write the Admin vault; read `database-url` only | – |
+| worker | pull | read the Admin vault (LLM key, Teams webhook and bot, SMTP); read `database-url` only | – |
+| web | pull | read its client secret only | – |
 | adapter, radar-job, radar, notifier | – | – | service `adapter`, service `radar-job`, agent `radar`, service `notifier` |
 
 The four job identities only sign in to the gateway (`SERVICE_AUTH=managed_identity`,
@@ -162,8 +162,6 @@ Then, signed in as an admin:
   gets a public HTTPS address; every call still needs an Entra token from an agent registered in
   Admin → Agents. Put it behind Front Door with WAF if City policy asks for it.
 - **Office-only access**: list City's public IP ranges in `webAllowedIps`.
-- **Key Vault without public access**: add a private endpoint in the apps subnet and set
-  `publicNetworkAccess: 'Disabled'`. The apps already reach it from inside the VNet.
 - **Bigger database**: change `Standard_B2s` to a General Purpose SKU; the load test
   (`docs/load-test.md`) shows B2s is enough for 500 projects.
 

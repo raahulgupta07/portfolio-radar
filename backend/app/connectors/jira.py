@@ -16,6 +16,7 @@ Data Center's is GET /rest/api/2/search.
 from __future__ import annotations
 
 import base64
+from urllib.parse import quote
 from datetime import date, datetime
 from typing import Any
 
@@ -33,6 +34,7 @@ from app.connectors.base import (
 from app.connectors.http import ReadOnlyHttpClient
 
 PAGE = 100
+MAX_PAGES = 500  # a tracker that never says "last page" cannot stall the sync
 
 
 def auth_headers(flavor: str, account: str, token: str) -> dict[str, str]:
@@ -86,7 +88,7 @@ class JiraConnector:
         out: list[dict[str, Any]] = []
         if self.cloud:
             token = None
-            while True:
+            for _ in range(MAX_PAGES):
                 params: dict[str, Any] = {"jql": jql, "fields": ",".join(fields) or "id", "maxResults": PAGE}
                 if token:
                     params["nextPageToken"] = token
@@ -97,7 +99,7 @@ class JiraConnector:
                     break
         else:
             start = 0
-            while True:
+            for _ in range(MAX_PAGES):
                 page = await self.client.get_json(f"{self.api}/search", {
                     "jql": jql, "fields": ",".join(fields) or "id", "startAt": start, "maxResults": PAGE})
                 issues = page.get("issues", [])
@@ -112,7 +114,7 @@ class JiraConnector:
             return int((await self.client.get_json(f"{self.api}/search", {"jql": jql, "maxResults": 0}))["total"])
         # Cloud has no GET count, so page through ids only.
         n, token = 0, None
-        while True:
+        for _ in range(MAX_PAGES):
             params: dict[str, Any] = {"jql": jql, "fields": "id", "maxResults": 5000}
             if token:
                 params["nextPageToken"] = token
@@ -121,6 +123,7 @@ class JiraConnector:
             token = page.get("nextPageToken")
             if not token or page.get("isLast"):
                 return n
+        raise SourceUnavailable(f"JIRA: more than {MAX_PAGES} pages for one count")
 
     # -- projects ----------------------------------------------------------------
 
@@ -132,7 +135,7 @@ class JiraConnector:
         if not self.cloud:
             return [self._ref(p) for p in await self.client.get_json(f"{self.api}/project", {"expand": "lead"})]
         out, start = [], 0
-        while True:
+        for _ in range(MAX_PAGES):
             page = await self.client.get_json(f"{self.api}/project/search",
                                               {"startAt": start, "maxResults": 50, "expand": "lead,insight"})
             values = page.get("values", [])
@@ -140,6 +143,7 @@ class JiraConnector:
             start += len(values)
             if page.get("isLast", True) or not values:
                 return out
+        return out
 
     async def _anchor(self, key: str, extra: list[str]) -> dict[str, Any] | None:
         if not self.f.anchor_jql:
@@ -148,7 +152,7 @@ class JiraConnector:
         return found[0]["fields"] if found else None
 
     async def get_project(self, key: str) -> SourceProject:
-        p = await self.client.get_json(f"{self.api}/project/{key}", {"expand": "lead,insight"})
+        p = await self.client.get_json(f"{self.api}/project/{quote(key, safe='')}", {"expand": "lead,insight"})
         wanted = [x for x in (self.f.start_date_field, self.f.end_date_field, self.f.strategy_field,
                               "" if self.f.percent_done == "tasks" else self.f.percent_done) if x]
         anchor = await self._anchor(key, wanted)
@@ -180,7 +184,7 @@ class JiraConnector:
         )
 
     async def get_milestones(self, key: str) -> list[SourceMilestone]:
-        versions = await self.client.get_json(f"{self.api}/project/{key}/versions")
+        versions = await self.client.get_json(f"{self.api}/project/{quote(key, safe='')}/versions")
         return [SourceMilestone(name=v["name"], due_date=_date(v.get("releaseDate")),
                                 status="done" if v.get("released") else "open")
                 for v in versions if not v.get("archived")]
@@ -191,7 +195,7 @@ class JiraConnector:
         seen: set[int] = set()
         for b in boards.get("values", []):
             start = 0
-            while True:
+            for _ in range(MAX_PAGES):
                 page = await self.client.get_json(f"/rest/agile/1.0/board/{b['id']}/sprint",
                                                   {"state": "active,future", "startAt": start, "maxResults": 50})
                 values = page.get("values", [])

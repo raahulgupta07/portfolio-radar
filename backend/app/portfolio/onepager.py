@@ -7,10 +7,11 @@ long lists are cut with "and N more" so nothing runs onto a second page.
 from __future__ import annotations
 
 from datetime import date, datetime
+import re
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, unescape
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, landscape
@@ -84,10 +85,11 @@ class Page:
         p = Paragraph(html, style)
         _, h = p.wrap(w, 10_000)
         if max_h is not None and h > max_h:
-            words = html.split(" ")
+            # Cut the plain text, then escape it again: cutting the markup could break a tag.
+            words = unescape(re.sub(r"<[^>]+>", " ", html)).split()
             while words and h > max_h:
                 words = words[:-max(1, len(words) // 8)]
-                p = Paragraph(" ".join(words) + " …", style)
+                p = Paragraph(escape(" ".join(words)) + " …", style)
                 _, h = p.wrap(w, 10_000)
         p.drawOn(self.c, x, self.Y(y + h))
         return h

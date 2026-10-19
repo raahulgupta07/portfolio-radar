@@ -26,6 +26,7 @@ from app.mcp.registry import Registry, ToolContext, ToolSpec
 from app.models.mcp import McpCall
 from app.settings import Settings
 
+MAX_ARGS_CHARS = 100_000  # no tool needs more; refuse bigger calls before they reach a handler
 log = logging.getLogger("mcp.guard")
 
 
@@ -88,10 +89,13 @@ class Gateway:
         spec = self.registry.get(server, tool)
 
         try:
-            if spec is None:
-                raise GuardDenied(f"Unknown tool {server}.{tool}")
+            # Rate limit first, so unknown tool names cannot flood the audit log.
             if not self.limiter.allow(caller.id, self._rate_limit(caller)):
                 raise GuardDenied("Too many requests. Try again in a minute")
+            if spec is None:
+                raise GuardDenied(f"Unknown tool {server}.{tool}")
+            if len(json.dumps(arguments, default=str)) > MAX_ARGS_CHARS:
+                raise GuardDenied("Arguments too large")
             async with session_scope() as session:
                 usable, why = await self.registry.is_usable(session, spec)
             if not usable:
@@ -126,12 +130,20 @@ class Gateway:
         await self._audit(caller, server, tool, arguments, result, started)
         return result
 
-    async def _audit(self, caller: Caller, server: str, tool: str, arguments: dict[str, Any],
-                     result: CallResult, started: float) -> None:
+    def _mask(self, server: str, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Hide secret arguments, also when the tool is called through omni.invoke_tool."""
         spec = self.registry.get(server, tool)
         if spec is not None and spec.secret_args:
             arguments = {k: ("[secret]" if k in spec.secret_args else v) for k, v in arguments.items()}
-        args_text = redact_text(json.dumps(arguments, default=str, sort_keys=True))
+        if (server, tool) == ("omni", "invoke_tool") and isinstance(arguments.get("arguments"), dict):
+            inner = self._mask(str(arguments.get("server", "")), str(arguments.get("tool", "")), arguments["arguments"])
+            arguments = {**arguments, "arguments": inner}
+        return arguments
+
+    async def _audit(self, caller: Caller, server: str, tool: str, arguments: dict[str, Any],
+                     result: CallResult, started: float) -> None:
+        arguments = self._mask(server, tool, arguments)
+        args_text = redact_text(json.dumps(arguments, default=str, sort_keys=True)[:200_000])
         if len(args_text) > self.settings.audit_args_max_chars:
             args_text = args_text[: self.settings.audit_args_max_chars] + "…"
         async with session_scope() as session:

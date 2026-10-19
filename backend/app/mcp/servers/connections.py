@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import smtplib
-from datetime import UTC, datetime, time
+import ssl
+from datetime import UTC, datetime, time, timedelta
 from email.message import EmailMessage
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
@@ -35,7 +36,7 @@ from app.mcp.registry import ToolContext
 from app.mcp.servers.admin import ADAPTER, CALLERS, ROLES, SourceArg, SourceId, server
 from app.models.app import Prefix, Setting, Source
 from app.models.mcp import McpAgent, McpCall, McpTool, McpToolChange
-from app.secretstore import REF_PATTERN, SecretError, is_set, kv_name, resolve
+from app.secretstore import KV_PATTERN, SecretError, is_set, kv_name, resolve
 from app.portfolio.queries import sync_status
 
 AUTH_METHODS = {"jira": {"api_token", "pat"}, "openproject": {"api_key"}, "multica": {"token"}}
@@ -63,6 +64,26 @@ def _changed(ctx: ToolContext, source_id: str | None = None) -> None:
     for sid, c in (ctx.services.get("connectors") or {}).items():
         if source_id in (None, sid) and hasattr(c, "invalidate"):
             c.invalidate()
+
+
+def _moved(old: str, new: str) -> bool:
+    """A saved address changed to a different one (setting it the first time is not a move)."""
+    return bool(old) and old.rstrip("/").lower() != new.rstrip("/").lower()
+
+
+WRITTEN_KEY = "secrets_written"  # app.setting: secret name → when set_secret last saved it
+JUST_WRITTEN = timedelta(minutes=15)
+
+
+async def _just_written(session, ref: str) -> bool:
+    """Whether a person pasted this secret in the last few minutes (so it is meant for the new address)."""
+    row = await session.get(Setting, WRITTEN_KEY)
+    at = (row.value or {}).get(ref) if row else None
+    return bool(at) and datetime.now(UTC) - datetime.fromisoformat(at) < JUST_WRITTEN
+
+
+# Where each service's secret is sent: changing that address needs the secret pasted again.
+SECRET_HOST = {"llm": ("base_url", "api_key_ref"), "email": ("smtp_host", "password_ref")}
 
 
 def _err(e: ValidationError) -> ToolError:
@@ -186,7 +207,7 @@ class SourceSettings(BaseModel):
     flavor: Literal["", "cloud", "datacenter"] = ""
     auth_method: str = Field("", max_length=32)
     account: str = Field("", max_length=200, description="The service account the read-only token belongs to")
-    secret_ref: str = Field("", pattern=REF_PATTERN, description="Name of the token in the secret store, e.g. kv://jira-read-token")
+    secret_ref: str = Field("", pattern=KV_PATTERN, description="Name of the token in the secret store, e.g. kv://jira-read-token")
     enabled: bool = True
 
 
@@ -202,6 +223,9 @@ async def save_source(args: SourceSettings, ctx: ToolContext) -> dict:
         row = await session.get(Source, args.source)
         if row is None:
             raise ToolError(f"No source {args.source}")
+        if (_moved(row.base_url, args.base_url) and row.secret_ref and args.secret_ref == row.secret_ref
+                and not await _just_written(session, row.secret_ref)):
+            raise ToolError("The address changed. Paste the token again, so the saved one is never sent to a new host")
         row.base_url, row.flavor, row.auth_method = args.base_url, args.flavor, args.auth_method
         row.account, row.secret_ref, row.enabled = args.account, args.secret_ref, args.enabled
     _changed(ctx, args.source)
@@ -222,6 +246,13 @@ async def set_secret(args: SecretValue, ctx: ToolContext) -> dict:
         await store.set(kv_name(args.ref), args.value.strip())
     except SecretError as e:
         raise ToolError(str(e)) from e
+    async with session_scope() as session:
+        row = await session.get(Setting, WRITTEN_KEY)
+        written = {**(row.value if row else {}), args.ref: datetime.now(UTC).isoformat()}
+        if row is None:
+            session.add(Setting(key=WRITTEN_KEY, value=written, updated_by=ctx.caller.id))
+        else:
+            row.value, row.updated_by = written, ctx.caller.id
     _changed(ctx)
     return {"ref": args.ref, "saved": True, "store": store.kind}
 
@@ -359,6 +390,14 @@ async def save_integration(args: IntegrationArgs, ctx: ToolContext) -> dict:
     SSO changes apply to sign-in at once; the others from the next run."""
     try:
         async with session_scope() as session:
+            if args.name in SECRET_HOST:
+                host, ref = SECRET_HOST[args.name]
+                old, saved = await integrations.load(session, args.name, ctx.settings)
+                if (saved and getattr(old, ref) and args.config.get(ref) == getattr(old, ref)
+                        and _moved(getattr(old, host), str(args.config.get(host, "")))
+                        and not await _just_written(session, getattr(old, ref))):
+                    raise ToolError(f"The {host.replace('_', ' ')} changed. Paste the secret again, so the saved one "
+                                    "is never sent to a new host")
             cfg = await integrations.save(session, args.name, args.config, ctx.caller.id)
     except ValidationError as e:
         raise _err(e) from e
@@ -456,7 +495,7 @@ def _smtp_send(cfg, password: str, to: str) -> None:
     msg["Subject"], msg["From"], msg["To"] = "[Portfolio Radar] Test email", cfg.sender, to
     msg.set_content("Test from Portfolio Radar Admin. Radar sends email only after a person approves.")
     with smtplib.SMTP(cfg.smtp_host, cfg.smtp_port, timeout=30) as s:
-        s.starttls()
+        s.starttls(context=ssl.create_default_context())  # check the server's certificate
         if cfg.username:
             s.login(cfg.username, password)
         s.send_message(msg)

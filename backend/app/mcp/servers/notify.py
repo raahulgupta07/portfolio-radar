@@ -32,8 +32,13 @@ async def list_ready(args, ctx: ToolContext) -> dict:
                                                              Approval.sent_at.is_(None)).order_by(Approval.id))).all()
     ready = []
     for a in rows:
-        send_at = a.draft_json.get("send_at")
-        if send_at and datetime.fromisoformat(send_at) > now:
+        try:
+            send_at = datetime.fromisoformat(a.draft_json["send_at"]) if a.draft_json.get("send_at") else None
+            if send_at is not None and send_at.tzinfo is None:
+                send_at = send_at.replace(tzinfo=UTC)
+        except (TypeError, ValueError):
+            send_at = None  # a bad time must not stop every other draft; send as soon as approved
+        if send_at and send_at > now:
             continue
         if (a.draft_json.get("send_result") or {}).get("attempts", 0) >= 5:
             continue

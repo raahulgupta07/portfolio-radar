@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: radar
       POSTGRES_PASSWORD: radar
       POSTGRES_DB: radar
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]  # this machine only
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U radar"]
@@ -25,7 +25,7 @@ services:
       DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
       MCP_ALLOWED_HOSTS: '["127.0.0.1:*","localhost:*","mcp:*"]'
       SECRET_STORE_PATH: /srv/secrets/dev-secrets.json
-    ports: ["8000:8000"]
+    ports: ["127.0.0.1:8000:8000"]  # dev tokens work here: this machine only
     volumes: [devsecrets:/srv/secrets]
     depends_on:
       db: {condition: service_healthy}
@@ -59,7 +59,7 @@ services:
     environment:
       GATEWAY_URL: http://mcp:8000
       ORIGIN: http://localhost:3000
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     depends_on:
       mcp: {condition: service_healthy}
     restart: unless-stopped

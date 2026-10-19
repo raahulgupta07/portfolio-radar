@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import json
+from urllib.parse import quote
 from collections.abc import Callable
 from datetime import date, datetime
 from typing import Any
@@ -35,6 +36,7 @@ from app.connectors.base import (
 from app.connectors.http import ReadOnlyHttpClient
 
 PAGE = 200
+MAX_PAGES = 500  # a tracker that never ends its list cannot stall the sync
 
 
 def auth_headers(token: str) -> dict[str, str]:
@@ -85,13 +87,14 @@ class OpenProjectConnector:
     async def collection(self, path: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         offset = 1
-        while True:
+        for _ in range(MAX_PAGES):
             page = await self.client.get_json(path, {**(params or {}), "pageSize": PAGE, "offset": offset})
             els = (page.get("_embedded") or {}).get("elements", [])
             out += els
             if not els or len(out) >= page.get("total", 0):
                 return out
             offset += 1
+        return out
 
     async def total(self, path: str, filters: str) -> int:
         page = await self.client.get_json(path, {"filters": filters, "pageSize": 1})
@@ -119,10 +122,10 @@ class OpenProjectConnector:
         return [self._ref(p) for p in projects]
 
     def _wp_path(self, key: str) -> str:
-        return f"/api/v3/projects/{key}/work_packages"
+        return f"/api/v3/projects/{quote(key, safe='')}/work_packages"
 
     async def get_project(self, key: str) -> SourceProject:
-        p = await self.client.get_json(f"/api/v3/projects/{key}")
+        p = await self.client.get_json(f"/api/v3/projects/{quote(key, safe='')}")
         if self.f.status_from == "project_status":
             status = ((p.get("_links") or {}).get("status") or {}).get("title")
         else:
@@ -169,7 +172,7 @@ class OpenProjectConnector:
         return out
 
     async def get_sprints(self, key: str) -> list[SourceSprint]:
-        versions = await self.collection(f"/api/v3/projects/{key}/versions")
+        versions = await self.collection(f"/api/v3/projects/{quote(key, safe='')}/versions")
         today = self.today()
         out = []
         for v in versions:

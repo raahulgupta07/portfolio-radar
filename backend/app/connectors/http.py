@@ -15,6 +15,8 @@ from app.connectors.base import SourceUnavailable
 
 READ_METHODS = frozenset({"GET", "HEAD"})
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+MAX_RETRY_AFTER = 60.0  # seconds; a tracker cannot park the nightly sync
+MAX_BODY = 20_000_000  # bytes per answer
 
 
 class ReadOnlyViolation(RuntimeError):
@@ -65,14 +67,19 @@ class ReadOnlyHttpClient:
                 raise SourceUnavailable(f"{self.source_name}: {resp.status_code} access denied (check the read-only token)")
             if resp.status_code >= 400:
                 raise SourceUnavailable(f"{self.source_name}: HTTP {resp.status_code} for {path}")
-            return resp.json()
+            if len(resp.content) > MAX_BODY:
+                raise SourceUnavailable(f"{self.source_name}: answer too large for {path}")
+            try:
+                return resp.json()
+            except ValueError as e:
+                raise SourceUnavailable(f"{self.source_name}: not JSON from {path}") from e
         raise AssertionError("unreachable")
 
     def _delay(self, attempt: int, resp: httpx.Response | None) -> float:
         if resp is not None and resp.status_code == 429:
             retry_after = resp.headers.get("retry-after", "")
             if retry_after.isdigit():
-                return float(retry_after)
+                return min(float(retry_after), MAX_RETRY_AFTER)
         return self.backoff_seconds * (2 ** (attempt - 1))
 
     async def aclose(self) -> None:

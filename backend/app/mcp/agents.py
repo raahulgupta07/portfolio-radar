@@ -41,7 +41,7 @@ def to_caller(a: McpAgent) -> Caller:
 
 def sso_rules(cfg: SsoConfig) -> SsoRules:
     return SsoRules(cfg.tenant_id, cfg.audience, tuple(cfg.default_roles),
-                    {g.group_id: tuple(g.roles) for g in cfg.groups})
+                    {g.group_id: tuple(g.roles) for g in cfg.groups}, tuple(getattr(cfg, "user_apps", ())))
 
 
 async def refresh(directory: Directory) -> None:

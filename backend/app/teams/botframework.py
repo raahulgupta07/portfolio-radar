@@ -69,8 +69,8 @@ class BotTokenVerifier:
         except (jwt.PyJWTError, httpx.HTTPError, KeyError) as e:
             raise BotAuthError(f"Bot Framework token rejected: {type(e).__name__}") from e
         claimed = (claims.get("serviceurl") or claims.get("serviceUrl") or "").rstrip("/")
-        if claimed and claimed != service_url.rstrip("/"):
-            raise BotAuthError("Service URL does not match the token")
+        if not claimed or claimed != service_url.rstrip("/"):
+            raise BotAuthError("Service URL missing from the token or not matching it")
         return claims
 
 

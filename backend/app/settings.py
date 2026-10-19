@@ -13,7 +13,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
 
-    app_env: Literal["dev", "test", "prod"] = "dev"
+    # prod unless set: a deployment that forgets APP_ENV must not honour DEV_TOKENS.
+    app_env: Literal["dev", "test", "prod"] = "prod"
     database_url: str = "postgresql+psycopg://radar:radar@localhost:5432/radar"
 
     source_mode: Literal["mock", "live"] = "mock"
@@ -56,6 +57,8 @@ class Settings(BaseSettings):
     entra_audience: str = ""  # the gateway's API app ID URI or client ID
     entra_default_roles: list[str] = Field(default_factory=lambda: ["viewer"])  # any signed-in employee
     entra_group_roles: dict[str, list[str]] = Field(default_factory=dict)  # Entra group object ID -> roles
+    # Client IDs of the apps people sign in through (the web app). Person tokens from other apps are refused.
+    entra_user_apps: list[str] = Field(default_factory=list)
     # Apps signing in as themselves (client credentials): app ID -> {"kind": "agent"|"service", "id": ..., "roles": [...]}
     entra_apps: dict[str, dict[str, Any]] = Field(default_factory=dict)
 

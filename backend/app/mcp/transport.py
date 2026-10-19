@@ -8,6 +8,7 @@ Gateway, so the guard runs on every call and no tool can be reached around it.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from mcp.server.context import CallNext, HandlerResult, ServerMiddleware, ServerRequestContext
@@ -22,6 +23,8 @@ from app.mcp.guard import Gateway
 from app.mcp.identity import Caller, TokenResolver, UnknownToken
 
 INVALID_REQUEST = -32600
+
+log = logging.getLogger("mcp.transport")
 
 
 class GuardMiddleware(ServerMiddleware[Any]):
@@ -92,6 +95,8 @@ class RequireToken:
             try:
                 self.resolver.resolve(Request(scope).headers.get("authorization"))
             except UnknownToken as e:
+                client = (scope.get("client") or ("?",))[0]
+                log.warning("refused token on %s from %s: %s", scope.get("path"), client, e)
                 await JSONResponse({"error": str(e)}, status_code=401,
                                    headers={"WWW-Authenticate": "Bearer"})(scope, receive, send)
                 return

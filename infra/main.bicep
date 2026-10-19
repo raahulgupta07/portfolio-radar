@@ -18,8 +18,9 @@ param location string = resourceGroup().location
 @description('false on the first run: create the registry and data services only')
 param deployApps bool = true
 
-@description('Image tag to run (the git commit SHA in CI)')
-param imageTag string = 'latest'
+@description('Image tag to run: the git commit SHA (CI sets it; no "latest")')
+@minLength(7)
+param imageTag string
 
 @description('PostgreSQL admin password. Stored in Key Vault as part of database-url; never in app settings.')
 @secure()
@@ -69,7 +70,8 @@ param tags object = {
 
 var name = toLower(prefix)
 var suffix = uniqueString(resourceGroup().id)
-var kvName = take('kv-${name}-${suffix}', 24)
+var kvName = take('kv-${name}-${suffix}', 24) // the app's own secrets: database URL, web client secret
+var kvAppName = take('kva-${name}-${suffix}', 24) // secrets admins paste in Admin (tracker tokens, LLM key…)
 var acrName = 'acr${replace(name, '-', '')}${suffix}'
 var pgName = 'pg-${name}-${suffix}'
 var gatewayAppName = 'ca-${name}-mcp'
@@ -113,6 +115,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           addressPrefix: '10.40.2.0/24'
           delegations: [{ name: 'db', properties: { serviceName: 'Microsoft.DBforPostgreSQL/flexibleServers' } }]
         }
+      }
+      {
+        name: 'endpoints'
+        properties: { addressPrefix: '10.40.3.0/24' }
       }
     ]
   }
@@ -171,21 +177,74 @@ resource pgTls 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2024-08
 
 // -- secrets ---------------------------------------------------------------------------
 
+// Two vaults. Admins can write any name in the app vault (through the gateway), so the app's own secrets
+// live in a vault the gateway may only read one secret from. Both are reachable only from the VNet.
+var vaultProps = {
+  tenantId: subscription().tenantId
+  sku: { family: 'A', name: 'standard' }
+  enableRbacAuthorization: true
+  enableSoftDelete: true
+  softDeleteRetentionInDays: 90
+  enablePurgeProtection: true
+  publicNetworkAccess: 'Disabled'
+  networkAcls: { defaultAction: 'Deny', bypass: 'AzureServices' }
+}
+
 resource kv 'Microsoft.KeyVault/vaults@2024-11-01' = {
   name: kvName
   location: location
   tags: tags
+  properties: vaultProps
+}
+
+resource kvApp 'Microsoft.KeyVault/vaults@2024-11-01' = {
+  name: kvAppName
+  location: location
+  tags: tags
+  properties: vaultProps
+}
+
+resource kvDns 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: 'privatelink.vaultcore.azure.net'
+  location: 'global'
+  tags: tags
+}
+
+resource kvDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: kvDns
+  name: 'vnet-${name}'
+  location: 'global'
   properties: {
-    tenantId: subscription().tenantId
-    sku: { family: 'A', name: 'standard' }
-    enableRbacAuthorization: true
-    enableSoftDelete: true
-    softDeleteRetentionInDays: 90
-    enablePurgeProtection: true
-    publicNetworkAccess: 'Enabled' // tokens pasted in Admin go here through the gateway; see docs for a private endpoint
-    networkAcls: { defaultAction: 'Allow', bypass: 'AzureServices' }
+    registrationEnabled: false
+    virtualNetwork: { id: vnet.id }
   }
 }
+
+var vaults = [
+  { name: kvName, id: kv.id }
+  { name: kvAppName, id: kvApp.id }
+]
+
+resource kvEndpoints 'Microsoft.Network/privateEndpoints@2024-05-01' = [for v in vaults: {
+  name: 'pe-${v.name}'
+  location: location
+  tags: tags
+  properties: {
+    subnet: { id: vnet.properties.subnets[2].id }
+    privateLinkServiceConnections: [{
+      name: v.name
+      properties: { privateLinkServiceId: v.id, groupIds: ['vault'] }
+    }]
+  }
+}]
+
+resource kvEndpointDns 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = [for (v, i) in vaults: {
+  parent: kvEndpoints[i]
+  name: 'vault'
+  properties: {
+    privateDnsZoneConfigs: [{ name: 'vault', properties: { privateDnsZoneId: kvDns.id } }]
+  }
+}]
 
 resource kvDatabaseUrl 'Microsoft.KeyVault/vaults/secrets@2024-11-01' = {
   parent: kv
@@ -234,10 +293,10 @@ resource pullRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for i
   }
 }]
 
-// The gateway saves secrets pasted in Admin (set_secret), so it may write them.
+// The gateway saves secrets pasted in Admin (set_secret): write access to the app vault only.
 resource kvGateway 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kv.id, ids[0].id, roles.kvSecretsOfficer)
-  scope: kv
+  name: guid(kvApp.id, ids[0].id, roles.kvSecretsOfficer)
+  scope: kvApp
   properties: {
     principalId: ids[0].properties.principalId
     principalType: 'ServicePrincipal'
@@ -245,16 +304,37 @@ resource kvGateway 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-// The worker reads the LLM key, Teams webhook and SMTP password; the web app reads its own client secret.
-resource kvReaders 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for i in range(1, 2): {
-  name: guid(kv.id, ids[i].id, roles.kvSecretsUser)
-  scope: kv
+// The worker reads secrets pasted in Admin (LLM key, Teams webhook and bot secret, SMTP password).
+resource kvWorkerApp 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kvApp.id, ids[1].id, roles.kvSecretsUser)
+  scope: kvApp
+  properties: {
+    principalId: ids[1].properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.kvSecretsUser)
+  }
+}
+
+// Each app reads only its own secret from the app's vault: gateway and worker the database URL, web its client secret.
+resource kvDbReaders 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for i in range(0, 2): {
+  name: guid(kvDatabaseUrl.id, ids[i].id, roles.kvSecretsUser)
+  scope: kvDatabaseUrl
   properties: {
     principalId: ids[i].properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.kvSecretsUser)
   }
 }]
+
+resource kvWebReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kvWebSecret.id, ids[2].id, roles.kvSecretsUser)
+  scope: kvWebSecret
+  properties: {
+    principalId: ids[2].properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.kvSecretsUser)
+  }
+}
 
 // -- container apps ---------------------------------------------------------------------------
 
@@ -283,9 +363,8 @@ var gatewayInternalHost = '${gatewayAppName}.internal.${env.properties.defaultDo
 var gatewayPublicHost = '${gatewayAppName}.${env.properties.defaultDomain}'
 var webHost = 'ca-${name}-web.${env.properties.defaultDomain}'
 var origin = empty(webOrigin) ? 'https://${webHost}' : webOrigin
-// Inside the environment plain http to the app name works when the gateway is internal; an external
-// gateway refuses http, so the web app and worker use its https address.
-var gatewayUrlInside = gatewayExternal ? 'https://${gatewayPublicHost}' : 'http://${gatewayAppName}'
+// The web app and worker reach the gateway over https: its internal address, or its public one if external.
+var gatewayUrlInside = gatewayExternal ? 'https://${gatewayPublicHost}' : 'https://${gatewayInternalHost}'
 
 // Service callers the gateway accepts, by managed identity client ID (see app/servicetokens.py).
 var entraApps = {
@@ -299,7 +378,7 @@ var common = [
   { name: 'APP_ENV', value: 'prod' }
   { name: 'TIMEZONE', value: timezone }
   { name: 'SECRET_STORE', value: 'keyvault' }
-  { name: 'KEY_VAULT_URL', value: kv.properties.vaultUri }
+  { name: 'KEY_VAULT_URL', value: kvApp.properties.vaultUri }
 ]
 
 resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
@@ -316,7 +395,7 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
         external: gatewayExternal
         targetPort: 8000
         transport: 'http'
-        allowInsecure: !gatewayExternal // the web app and worker call http://<name> inside the environment
+        allowInsecure: false // https only, also inside the environment (people's tokens travel here)
       }
       registries: [{ server: acr.properties.loginServer, identity: ids[0].id }]
       secrets: [{ name: 'database-url', keyVaultUrl: kvDatabaseUrl.properties.secretUri, identity: ids[0].id }]
@@ -334,6 +413,7 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
           { name: 'ENTRA_AUDIENCE', value: gatewayAudience }
           { name: 'ENTRA_GROUP_ROLES', value: string(entraGroupRoles) }
           { name: 'ENTRA_APPS', value: string(entraApps) }
+          { name: 'ENTRA_USER_APPS', value: string([webClientId]) }
           { name: 'DEV_TOKENS', value: '{}' }
           { name: 'MCP_ALLOWED_HOSTS', value: string([gatewayAppName, '${gatewayAppName}:*', gatewayInternalHost, '${gatewayInternalHost}:*', gatewayPublicHost, '${gatewayPublicHost}:*']) }
           { name: 'MCP_ALLOWED_ORIGINS', value: string([origin]) }
@@ -347,7 +427,7 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
       scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }
-  dependsOn: [pullRoles, kvGateway]
+  dependsOn: [pullRoles, kvGateway, kvDbReaders, kvEndpointDns]
 }
 
 resource worker 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
@@ -395,7 +475,7 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
       scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }
-  dependsOn: [pullRoles, kvReaders, gateway]
+  dependsOn: [pullRoles, kvWorkerApp, kvDbReaders, gateway]
 }
 
 resource web 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
@@ -445,7 +525,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
       scale: { minReplicas: 1, maxReplicas: 3 }
     }
   }
-  dependsOn: [pullRoles, kvReaders, gateway]
+  dependsOn: [pullRoles, kvWebReader, gateway]
 }
 
 // -- Teams chat (docs/teams-bot.md) ----------------------------------------------------------
@@ -480,11 +560,11 @@ resource botTeams 'Microsoft.BotService/botServices/channels@2022-09-15' = if (d
 // -- outputs ---------------------------------------------------------------------------------
 
 output registry string = acr.properties.loginServer
-output keyVaultUrl string = kv.properties.vaultUri
+output keyVaultUrl string = kvApp.properties.vaultUri
 output webUrl string = origin
 output webRedirectUri string = '${origin}/auth/callback'
 output teamsMessagingEndpoint string = '${origin}/api/teams/messages'
-output gatewayUrl string = gatewayExternal ? 'https://${gatewayPublicHost}' : 'http://${gatewayAppName} (inside the environment only)'
+output gatewayUrl string = gatewayExternal ? 'https://${gatewayPublicHost}' : 'https://${gatewayInternalHost} (inside the environment only)'
 @description('Give these managed identities access to the gateway API in Entra (they sign in as the worker jobs)')
 output workerJobIdentities object = {
   adapter: ids[3].properties.clientId

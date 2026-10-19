@@ -33,9 +33,9 @@ jobs:
       WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
       TEAMS_BOT_APP_ID: ${{ vars.TEAMS_BOT_APP_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - uses: azure/login@v2
+      - uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac  # v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}

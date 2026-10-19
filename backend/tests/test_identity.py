@@ -116,3 +116,23 @@ async def test_worker_jobs_sign_in_with_their_own_managed_identity():
     assert made == ["id-adapter", "id-notifier"]  # one credential per identity, reused
     with pytest.raises(RuntimeError, match="radar"):
         await tokens.get("radar")
+
+
+# -- security review fixes (docs/security-review.md) ---------------------------------
+
+def test_person_tokens_only_from_the_sign_in_app():
+    r = resolver(entra_user_apps=["web-app"])
+    assert r.resolve("Bearer " + token(azp="web-app")).kind == "human"
+    with pytest.raises(UnknownToken, match="Portfolio Radar app only"):
+        r.resolve("Bearer " + token(azp="some-agent-obo", groups=["g-pmo"]))  # an agent acting for an approver
+    with pytest.raises(UnknownToken, match="ENTRA_USER_APPS"):
+        resolver(app_env="prod").resolve("Bearer " + token(azp="web-app"))  # prod must list its sign-in app
+
+
+def test_other_tenant_and_guests_without_a_group_are_refused():
+    with pytest.raises(UnknownToken, match="another tenant"):
+        resolver().resolve("Bearer " + token(tid="99999999-2222-3333-4444-555555555555"))
+    with pytest.raises(UnknownToken, match="no access"):
+        resolver().resolve("Bearer " + token(tid=TENANT, acct=1))
+    guest = resolver().resolve("Bearer " + token(tid=TENANT, acct=1, groups=["g-pmo"]))
+    assert guest.roles == {"approver"}  # only what the group gives, no default viewer

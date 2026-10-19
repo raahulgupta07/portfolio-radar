@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 import httpx
@@ -33,7 +34,7 @@ def _send_email(settings: Settings, subject: str, body: str) -> None:
     msg["To"] = ", ".join(settings.notify_email_to)
     msg.set_content(body)
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as s:
-        s.starttls()
+        s.starttls(context=ssl.create_default_context())  # check the server's certificate
         if settings.smtp_user:
             s.login(settings.smtp_user, settings.smtp_password)
         s.send_message(msg)

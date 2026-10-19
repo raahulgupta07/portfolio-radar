@@ -39,6 +39,7 @@ class SsoRules:
     audience: str
     default_roles: tuple[str, ...]
     group_roles: dict[str, tuple[str, ...]]
+    user_apps: tuple[str, ...] = ()  # app registrations people sign in through, besides ENTRA_USER_APPS
 
 
 class Directory:
@@ -96,6 +97,8 @@ class EntraVerifier:
             raise UnknownToken(f"Token rejected: {type(e).__name__}") from e
         if claims.get("iss") not in self.issuers:
             raise UnknownToken("Token rejected: wrong issuer")
+        if claims.get("tid", self.sso.tenant_id) != self.sso.tenant_id:
+            raise UnknownToken("Token rejected: another tenant")
 
         if claims.get("idtyp") == "app" or ("scp" not in claims and "oid" in claims and "upn" not in claims
                                             and "preferred_username" not in claims):
@@ -105,9 +108,22 @@ class EntraVerifier:
                 raise UnknownToken("This app is not allowed to use the gateway")
             return caller
 
-        roles = set(self.sso.default_roles)
+        # A person's token counts only when it was issued to an app people sign in through (the web app).
+        # Otherwise any agent with on-behalf-of rights could act as an approver.
+        client = claims.get("azp") or claims.get("appid") or ""
+        user_apps = set(self.sso.user_apps) | set(self.settings.entra_user_apps)
+        if user_apps and client not in user_apps:
+            raise UnknownToken("Token rejected: people sign in through the Portfolio Radar app only")
+        if not user_apps and self.settings.app_env == "prod":
+            raise UnknownToken("Token rejected: no sign-in app is listed (ENTRA_USER_APPS)")
+        group_roles: set[str] = set()
         for group in claims.get("groups", []) or []:
-            roles.update(self.sso.group_roles.get(group, ()))
+            group_roles.update(self.sso.group_roles.get(group, ()))
+        guest = str(claims.get("acct", "0")) == "1"
+        # Guests (B2B) get only what a group gives them, never the default viewer role.
+        roles = group_roles if guest else set(self.sso.default_roles) | group_roles
+        if not roles:
+            raise UnknownToken("Token rejected: no access for this account")
         user_id = claims.get("preferred_username") or claims.get("upn") or claims.get("oid")
         return Caller(kind="human", id=str(user_id), roles=frozenset(roles))
 

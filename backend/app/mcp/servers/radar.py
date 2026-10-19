@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy import select
 
 from app import appsettings
@@ -33,6 +33,16 @@ server = ServerDef(
 HUMAN = {"human"}
 RADAR_WRITERS = {"agent", "service"}
 RADAR_ROLES = {"agent", "radar"}
+# Reading everyone's conversations and posting into them is for Radar itself only, not for other agents
+# set up in Admin (they get role "agent" too). Admin cannot give an agent these ids.
+RADAR_ITSELF = {"radar", "radar-job"}
+# Set only by people's answers and by Radar's own tools, never by a posted payload.
+PROTECTED_PAYLOAD = {"answer", "answered_by", "answered_at", "draft_id", "origin", "teams", "teams_sent_at"}
+
+
+def _radar_itself(ctx: ToolContext) -> None:
+    if ctx.caller.id not in RADAR_ITSELF:
+        raise ToolError("Only Radar itself may use this tool")
 
 
 def audiences(caller) -> list[str]:
@@ -111,7 +121,7 @@ class ConversationArgs(BaseModel):
     limit: int = Field(120, ge=1, le=500)
 
 
-@server.tool(callers=HUMAN, input_model=ConversationArgs, redact=False)
+@server.tool(callers=HUMAN, roles={"viewer"}, input_model=ConversationArgs, redact=False)
 async def get_conversation(args: ConversationArgs, ctx: ToolContext) -> dict:
     """Your conversation with Radar: messages, cards, questions and drafts waiting for you, and Radar's mood."""
     async with session_scope() as session:
@@ -175,7 +185,7 @@ class AskArgs(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
-@server.tool(callers=HUMAN, input_model=AskArgs, read_only=False, redact=False)
+@server.tool(callers=HUMAN, roles={"viewer"}, input_model=AskArgs, read_only=False, redact=False)
 async def ask_radar(args: AskArgs, ctx: ToolContext) -> dict:
     """Send Radar a message. Radar answers in your conversation, usually within seconds."""
     async with session_scope() as session:
@@ -357,6 +367,8 @@ class PostArgs(BaseModel):
 @server.tool(callers=RADAR_WRITERS, roles=RADAR_ROLES, input_model=PostArgs, read_only=False, redact=False)
 async def post_message(args: PostArgs, ctx: ToolContext) -> dict:
     """Post a message or card in a conversation. If it answers a question, the question is marked answered."""
+    _radar_itself(ctx)
+    args.payload = {k: v for k, v in args.payload.items() if k not in PROTECTED_PAYLOAD}
     async with session_scope() as session:
         to = args.to
         if args.reply_to is not None:
@@ -379,6 +391,7 @@ class PendingArgs(BaseModel):
 @server.tool(callers=RADAR_WRITERS, roles=RADAR_ROLES, input_model=PendingArgs, redact=False)
 async def pending_questions(args: PendingArgs, ctx: ToolContext) -> dict:
     """People's messages Radar has not answered yet, with the last few messages of each conversation."""
+    _radar_itself(ctx)
     async with session_scope() as session:
         qs = (await session.scalars(select(RadarMessage).where(RadarMessage.kind == "me", RadarMessage.state == "pending")
                                     .order_by(RadarMessage.id).limit(args.limit))).all()
@@ -399,6 +412,7 @@ class AnsweredAsks(BaseModel):
 @server.tool(callers=RADAR_WRITERS, roles=RADAR_ROLES, input_model=AnsweredAsks)
 async def list_asks(args: AnsweredAsks, ctx: ToolContext) -> dict:
     """Radar's recent questions to approvers, with answers, so Radar can act on a yes."""
+    _radar_itself(ctx)
     since = datetime.now(UTC) - timedelta(hours=args.since_hours)
     async with session_scope() as session:
         rows = (await session.scalars(select(RadarMessage).where(RadarMessage.kind == "ask",
@@ -413,7 +427,8 @@ class DraftArgs(BaseModel):
     to: str = Field(min_length=2, max_length=300, description="Recipients and channel, e.g. 'POS03 owner · Teams'")
     body: str = Field(min_length=10, max_length=20000)
     project: str | None = Field(None, max_length=64)
-    send_at: str | None = Field(None, description="ISO time to send after approval (empty = as soon as approved)")
+    send_at: AwareDatetime | None = Field(None, description="ISO time with time zone to send after approval "
+                                                             "(empty = as soon as approved)")
     from_ask: int | None = Field(None, description="The question this draft answers, if an approver said yes")
 
 
@@ -433,7 +448,7 @@ async def create_draft(args: DraftArgs, ctx: ToolContext) -> dict:
                 raise ToolError("A draft was already made for this question")
         a = Approval(kind=args.kind, status="pending", created_by=ctx.caller.id,
                      draft_json={"title": args.title, "to": args.to, "body": args.body, "project": args.project,
-                                 "send_at": args.send_at})
+                                 "send_at": args.send_at.isoformat() if args.send_at else None})
         session.add(a)
         await session.flush()
         session.add(RadarMessage(user_id="role:approver", kind="approval", mood="asking", body=args.body,

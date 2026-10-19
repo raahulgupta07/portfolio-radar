@@ -50,6 +50,7 @@ class Jwks:
 def bot_token(**over) -> str:
     claims = {"iss": "https://api.botframework.com", "aud": BOT_ID, "exp": int(time.time()) + 600,
               "serviceurl": SERVICE_URL, **over}
+    claims = {k: v for k, v in claims.items() if v is not None}
     return jwt.encode(claims, KEY, algorithm="RS256")
 
 
@@ -166,6 +167,7 @@ async def test_question_in_teams_is_answered_in_the_same_chat(setup):
     ({"aud": "someone-else"}, {}, 401),                      # token for another bot
     ({"iss": "https://evil.example"}, {}, 401),              # not signed as the Bot Framework
     ({"serviceurl": "https://smba.trafficmanager.net/emea/"}, {}, 401),  # token for another service URL
+    ({"serviceurl": None}, {}, 401),                           # token without a service URL
     ({}, {"service_url": "https://evil.example/"}, 401),     # our token would leak to that host
     ({}, {"tenant": "99999999-2222-3333-4444-555555555555"}, 403),  # another company's Teams
 ])

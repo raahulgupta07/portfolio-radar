@@ -5,7 +5,7 @@ using 'main.bicep'
 param prefix = 'radar'
 param location = 'southeastasia'
 param deployApps = bool(readEnvironmentVariable('DEPLOY_APPS', 'true'))
-param imageTag = readEnvironmentVariable('IMAGE_TAG', 'latest')
+param imageTag = readEnvironmentVariable('IMAGE_TAG')
 param postgresAdminPassword = readEnvironmentVariable('POSTGRES_ADMIN_PASSWORD')
 
 // City SSO: fill in from the Entra app registrations (docs/deploy-azure.md, step 1)

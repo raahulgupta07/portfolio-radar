@@ -2,7 +2,8 @@
 
 A secret reference is one of:
 - `kv://jira-read-token`  a secret in the store (Azure Key Vault in production)
-- `env://LLM_API_KEY`     an environment variable (for set-ups that already use them)
+- `env://LLM_API_KEY`     an environment variable, only the few named in ENV_SECRETS (for set-ups that
+                          already use them). Nothing else in the environment can be read this way.
 
 Admins paste a secret once in the Admin page. It goes straight to the store and
 is never shown, logged or returned again; the page only shows its name.
@@ -25,7 +26,15 @@ from app.settings import Settings
 
 KV_REF = re.compile(r"^kv://([a-z0-9][a-z0-9-]{0,99})$")
 ENV_REF = re.compile(r"^env://([A-Z][A-Z0-9_]{0,99})$")
-REF_PATTERN = r"^$|^kv://[a-z0-9][a-z0-9-]{0,99}$|^env://[A-Z][A-Z0-9_]{0,99}$"
+# The only environment variables a reference may name, each for one setting (see ref_pattern).
+ENV_SECRETS = frozenset({"LLM_API_KEY", "TEAMS_WEBHOOK_URL", "TEAMS_BOT_PASSWORD", "SMTP_PASSWORD"})
+KV_PATTERN = r"^$|^kv://[a-z0-9][a-z0-9-]{0,99}$"
+
+
+def ref_pattern(env_name: str | None = None) -> str:
+    """A secret reference for one setting: kv://… or, if given, that setting's own environment variable."""
+    assert env_name is None or env_name in ENV_SECRETS
+    return KV_PATTERN + (f"|^env://{env_name}$" if env_name else "")
 
 
 class SecretError(Exception):
@@ -120,6 +129,8 @@ async def resolve(store: SecretStore, ref: str) -> str:
     if not ref:
         return ""
     if m := ENV_REF.match(ref):
+        if m.group(1) not in ENV_SECRETS:
+            raise SecretError(f"env://{m.group(1)} is not a secret this app may read")
         return os.environ.get(m.group(1), "")
     return await store.get(kv_name(ref)) or ""
 
