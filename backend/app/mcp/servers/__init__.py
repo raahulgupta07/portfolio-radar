@@ -25,4 +25,5 @@ def build_registry(settings: Settings) -> Registry:
 
 def build_services(settings: Settings) -> dict[str, Any]:
     """Objects tools need at run time, handed to them through ToolContext.services."""
-    return {"connectors": build_connectors(settings), "secrets": build_secret_store(settings)}
+    secrets = build_secret_store(settings)
+    return {"connectors": build_connectors(settings, secrets), "secrets": secrets}

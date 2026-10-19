@@ -2,6 +2,7 @@
 
 from app.connectors.base import Connector
 from app.connectors.mock import MockConnector
+from app.secretstore import SecretStore
 from app.settings import Settings
 
 SOURCES = {
@@ -11,9 +12,10 @@ SOURCES = {
 }
 
 
-def build_connectors(settings: Settings) -> dict[str, Connector]:
+def build_connectors(settings: Settings, store: SecretStore) -> dict[str, Connector]:
+    """Mock: the sample data. Live: each source as set up in Admin → Connections (address, token, field mapping)."""
     if settings.source_mode == "mock":
         return {sid: MockConnector(sid, settings.sample_data_path) for sid in SOURCES}
-    raise RuntimeError(
-        "SOURCE_MODE=live is not available yet. Live JIRA and OpenProject connectors are built once "
-        "API access is confirmed (see docs/progress.md, Phase 2). Use SOURCE_MODE=mock.")
+    from app.connectors.live import LiveConnector
+
+    return {sid: LiveConnector(sid, name, settings, store) for sid, (name, _) in SOURCES.items()}

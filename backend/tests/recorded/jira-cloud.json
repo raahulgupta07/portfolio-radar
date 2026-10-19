@@ -1,0 +1,390 @@
+{
+ "base_url": "https://city.atlassian.net",
+ "requests": [
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "issuetype = Initiative"
+   },
+   "json": {
+    "isLast": true,
+    "issues": []
+   }
+  },
+  {
+   "path": "/rest/api/3/project/search",
+   "params": {
+    "startAt": "0"
+   },
+   "json": {
+    "startAt": 0,
+    "maxResults": 2,
+    "total": 3,
+    "isLast": false,
+    "values": [
+     {
+      "id": "10001",
+      "key": "DAAI",
+      "name": "CHL-IT-DAAI-014 Customer data platform",
+      "lead": {
+       "displayName": "Aye Aye"
+      },
+      "projectCategory": {
+       "name": "Data Team"
+      },
+      "insight": {
+       "lastIssueUpdateTime": "2026-10-18T09:12:44.000+0000"
+      }
+     },
+     {
+      "id": "10002",
+      "key": "DP",
+      "name": "CHL-DP-003 Loyalty app",
+      "lead": {
+       "displayName": "Min Thu"
+      },
+      "projectCategory": {
+       "name": "Digital Teams"
+      },
+      "insight": {
+       "lastIssueUpdateTime": "2026-10-17T15:01:02.000+0000"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/project/search",
+   "params": {
+    "startAt": "2"
+   },
+   "json": {
+    "startAt": 2,
+    "maxResults": 2,
+    "total": 3,
+    "isLast": true,
+    "values": [
+     {
+      "id": "10003",
+      "key": "SBX",
+      "name": "Team sandbox",
+      "lead": {
+       "displayName": "Ko Ko"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/project/DAAI",
+   "json": {
+    "id": "10001",
+    "key": "DAAI",
+    "name": "CHL-IT-DAAI-014 Customer data platform",
+    "lead": {
+     "displayName": "Aye Aye"
+    },
+    "projectCategory": {
+     "name": "Data Team"
+    },
+    "insight": {
+     "lastIssueUpdateTime": "2026-10-18T09:12:44.000+0000"
+    }
+   }
+  },
+  {
+   "path": "/rest/api/3/project/DP",
+   "json": {
+    "id": "10002",
+    "key": "DP",
+    "name": "CHL-DP-003 Loyalty app",
+    "lead": {
+     "displayName": "Min Thu"
+    },
+    "projectCategory": {
+     "name": "Digital Teams"
+    }
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "issuetype = Epic AND labels = portfolio",
+    "fields": "status"
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "id": "20001",
+      "key": "DAAI-1",
+      "fields": {
+       "status": {
+        "name": "In Progress",
+        "statusCategory": {
+         "key": "indeterminate"
+        }
+       },
+       "assignee": {
+        "displayName": "Su Su"
+       },
+       "customfield_10015": "2026-03-01",
+       "duedate": "2026-12-15",
+       "customfield_10100": {
+        "value": "Innovative Market Leader"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "statusCategory = \"To Do\"",
+    "nextPageToken": "page-2"
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "id": "3"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "statusCategory = \"To Do\""
+   },
+   "json": {
+    "nextPageToken": "page-2",
+    "issues": [
+     {
+      "id": "1"
+     },
+     {
+      "id": "2"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "statusCategory = \"In Progress\""
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "id": "4"
+     },
+     {
+      "id": "5"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "statusCategory = Done"
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "id": "6"
+     },
+     {
+      "id": "7"
+     },
+     {
+      "id": "8"
+     },
+     {
+      "id": "9"
+     },
+     {
+      "id": "10"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "issueLinkType = blocks"
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "key": "DAAI-12",
+      "fields": {
+       "issuelinks": [
+        {
+         "type": {
+          "name": "Blocks",
+          "inward": "is blocked by",
+          "outward": "blocks"
+         },
+         "outwardIssue": {
+          "key": "DP-40"
+         }
+        },
+        {
+         "type": {
+          "name": "Relates"
+         },
+         "outwardIssue": {
+          "key": "DP-41"
+         }
+        },
+        {
+         "type": {
+          "name": "Blocks"
+         },
+         "outwardIssue": {
+          "key": "DAAI-13"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "key": "DP-7",
+      "fields": {
+       "issuelinks": [
+        {
+         "type": {
+          "name": "Blocks"
+         },
+         "inwardIssue": {
+          "key": "DAAI-3"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/search/jql",
+   "params": {
+    "jql": "labels = risk"
+   },
+   "json": {
+    "isLast": true,
+    "issues": [
+     {
+      "key": "DAAI-30",
+      "fields": {
+       "summary": "Vendor API not ready",
+       "assignee": {
+        "displayName": "Aye Aye"
+       },
+       "customfield_10200": {
+        "value": "High"
+       },
+       "customfield_10201": {
+        "value": "Medium"
+       }
+      }
+     },
+     {
+      "key": "DP-50",
+      "fields": {
+       "summary": "Unclear rating",
+       "assignee": null,
+       "customfield_10200": {
+        "value": "Severe"
+       },
+       "customfield_10201": {
+        "value": "High"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/project/DAAI/versions",
+   "json": [
+    {
+     "name": "Beta",
+     "releaseDate": "2026-11-01",
+     "released": false,
+     "archived": false
+    },
+    {
+     "name": "Alpha",
+     "releaseDate": "2026-08-01",
+     "released": true,
+     "archived": false
+    },
+    {
+     "name": "Old plan",
+     "releaseDate": "2025-01-01",
+     "released": false,
+     "archived": true
+    }
+   ]
+  },
+  {
+   "path": "/rest/agile/1.0/board",
+   "params": {
+    "projectKeyOrId": "DAAI"
+   },
+   "json": {
+    "isLast": true,
+    "values": [
+     {
+      "id": 7,
+      "name": "DAAI board",
+      "type": "scrum"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/agile/1.0/board/7/sprint",
+   "json": {
+    "isLast": true,
+    "values": [
+     {
+      "id": 31,
+      "name": "DAAI Sprint 12",
+      "goal": "Ship consent screens",
+      "state": "active",
+      "startDate": "2026-10-13T02:00:00.000Z",
+      "endDate": "2026-10-27T02:00:00.000Z"
+     },
+     {
+      "id": 32,
+      "name": "DAAI Sprint 13",
+      "goal": "",
+      "state": "future"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/rest/api/3/project/DP/versions",
+   "json": []
+  },
+  {
+   "path": "/rest/agile/1.0/board",
+   "params": {
+    "projectKeyOrId": "DP"
+   },
+   "json": {
+    "isLast": true,
+    "values": []
+   }
+  }
+ ]
+}

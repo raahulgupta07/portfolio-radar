@@ -28,8 +28,9 @@
 	const steps = $derived([
 		{ n: 1, label: 'Connection', done: !!s.base_url && (!!s.secret_set || s.source_mode === 'mock') },
 		{ n: 2, label: 'Test', done: !!check?.ok },
-		{ n: 3, label: 'Status mapping', done: s.unmapped.length === 0 },
-		{ n: 4, label: 'Tools', done: s.tools.every((t: any) => t.status === 'on') }
+		...(s.fields ? [{ n: 3, label: 'Field mapping', done: !!s.fields.confirmed_by }] : []),
+		{ n: s.fields ? 4 : 3, label: 'Status mapping', done: s.unmapped.length === 0 },
+		{ n: s.fields ? 5 : 4, label: 'Tools', done: s.tools.every((t: any) => t.status === 'on') }
 	]);
 </script>
 
@@ -114,7 +115,7 @@
 
 	<div class="side">
 		<section class="card col" aria-labelledby="m-h">
-			<div class="hrow"><h2 id="m-h">3 · Status mapping</h2><span class="sub" style="margin:0">{s.name} status → app status</span></div>
+			<div class="hrow"><h2 id="m-h">{s.fields ? 4 : 3} · Status mapping</h2><span class="sub" style="margin:0">{s.name} status → app status</span></div>
 			{#if s.unmapped.length}
 				<p class="warnbox">{s.unmapped.length === 1 ? '1 status has' : `${s.unmapped.length} statuses have`} no mapping. Projects using {s.unmapped.length === 1 ? 'it' : 'them'} do not sync until you choose. Nothing is guessed.</p>
 			{/if}
@@ -152,7 +153,7 @@
 		</section>
 
 		<section class="card col" aria-labelledby="tl-h">
-			<div class="hrow"><h2 id="tl-h">4 · Tools</h2><span class="sub" style="margin:0">on <span class="mono">/{s.source}/mcp</span></span></div>
+			<div class="hrow"><h2 id="tl-h">{s.fields ? 5 : 4} · Tools</h2><span class="sub" style="margin:0">on <span class="mono">/{s.source}/mcp</span></span></div>
 			<ul class="checks">
 				{#each s.tools as t (t.tool)}
 					<li>
@@ -174,3 +175,49 @@
 		</section>
 	</div>
 </div>
+
+{#if s.fields}
+	<section class="card col" aria-labelledby="f-h">
+		<div class="hrow">
+			<h2 id="f-h">3 · Field mapping</h2>
+			<span class="sub" style="margin:0">where {s.name} keeps each project field</span>
+			<span class="st {s.fields.confirmed_by ? 'st-on' : 'st-review'}" style="margin-left:auto">
+				{s.fields.confirmed_by ? `confirmed by ${s.fields.confirmed_by}` : 'not confirmed'}
+			</span>
+		</div>
+		<p class={s.fields.confirmed_by ? 'sub' : 'warnbox'} style="margin:0">
+			Every company sets up {s.name} its own way, so nothing here is guessed. These are proposals. Check each one against
+			{s.name}, then confirm. A live sync does not read project fields until a person confirms. Changing a field later needs a new confirmation.
+		</p>
+		<form class="form fieldmap" method="POST" action="?/saveFields" use:enhance={submitting('fields')}>
+			<input type="hidden" name="about" value={JSON.stringify(s.fields.about)} />
+			{#each s.fields.about as a (a.field)}
+				{@const v = s.fields.values[a.field]}
+				<label class="fm">
+					<span class="mono b">{a.field}</span>
+					{#if a.kind === 'choice'}
+						<select name="f_{a.field}">
+							{#each a.options as o (o)}<option value={o} selected={v === o}>{o}</option>{/each}
+						</select>
+					{:else}
+						<input class="inp mono" name="f_{a.field}" value={a.kind === 'list' ? (v ?? []).join(', ') : (v ?? '')} />
+					{/if}
+					<span class="sub">{a.help}{JSON.stringify(v) !== JSON.stringify(a.default) ? ' · changed from the proposal' : ''}</span>
+				</label>
+			{/each}
+			<label class="confirm">
+				<input type="checkbox" name="confirm" checked={!!s.fields.confirmed_by} />
+				<span>I checked these against {s.name}. Use them for the live sync.</span>
+			</label>
+			<button class="btn dark" style="align-self:flex-start" disabled={busy !== ''}>{busy === 'fields' ? 'Saving…' : 'Save field mapping'}</button>
+		</form>
+	</section>
+{/if}
+
+<style>
+	.fieldmap { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+	.fieldmap > .confirm, .fieldmap > button { grid-column: 1 / -1; }
+	.confirm { display: flex; gap: 10px; align-items: center; }
+	.fm { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+	.fm .inp, .fm select { min-height: 38px; width: 100%; }
+</style>

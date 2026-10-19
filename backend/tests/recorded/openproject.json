@@ -1,0 +1,50 @@
+{
+  "base_url": "https://op.city.local",
+  "requests": [
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"filters": "\"type\""}, "json": {
+      "_type": "Collection", "total": 2, "count": 2, "_embedded": {"elements": [
+        {"id": 301, "subject": "Go-live", "date": "2026-12-01", "_links": {"status": {"href": "/api/v3/statuses/1", "title": "New"}}},
+        {"id": 302, "subject": "Design sign-off", "date": "2026-06-30", "_links": {"status": {"href": "/api/v3/statuses/12", "title": "Closed"}}}]}}},
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"sortBy": "startDate"}, "json": {
+      "_type": "Collection", "total": 12, "count": 1, "_embedded": {"elements": [{"id": 1, "startDate": "2026-02-02", "dueDate": "2026-02-20"}]}}},
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"sortBy": "dueDate"}, "json": {
+      "_type": "Collection", "total": 12, "count": 1, "_embedded": {"elements": [{"id": 9, "startDate": "2026-11-01", "dueDate": "2026-12-20"}]}}},
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"filters": "\"operator\":\"c\""}, "json": {"_type": "Collection", "total": 6, "count": 1}},
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"filters": "\"values\":[\"7\"]"}, "json": {"_type": "Collection", "total": 2, "count": 1}},
+    {"path": "/api/v3/projects/cdp/work_packages", "params": {"filters": "\"operator\":\"*\""}, "json": {"_type": "Collection", "total": 12, "count": 1}},
+
+    {"path": "/api/v3/projects/cdp/versions", "json": {"_type": "Collection", "total": 3, "count": 3, "_embedded": {"elements": [
+      {"name": "Sprint 8", "startDate": "2026-10-12", "endDate": "2026-10-25", "status": "open", "description": {"raw": "Load pipelines"}},
+      {"name": "Sprint 7", "startDate": "2026-09-28", "endDate": "2026-10-10", "status": "closed"},
+      {"name": "Sprint 9", "startDate": "2026-10-26", "endDate": "2026-11-08", "status": "open", "description": {"raw": ""}}]}}},
+
+    {"path": "/api/v3/projects/cdp", "json": {
+      "id": 5, "identifier": "cdp", "name": "CHL-IT-DAAI-020 Data lake", "active": true,
+      "updatedAt": "2026-10-18T03:30:00Z", "customField4": "Benchmark of excellence",
+      "_links": {"status": {"href": "/api/v3/project_statuses/on_track", "title": "On track"},
+                 "customField2": {"href": "/api/v3/users/14", "title": "Thida Win"}}}},
+
+    {"path": "/api/v3/projects", "json": {"_type": "Collection", "total": 2, "count": 2, "_embedded": {"elements": [
+      {"id": 5, "identifier": "cdp", "name": "CHL-IT-DAAI-020 Data lake", "updatedAt": "2026-10-18T03:30:00Z"},
+      {"id": 6, "identifier": "crm", "name": "CHL-DP-002 CRM refresh", "updatedAt": "2026-10-16T08:00:00Z"}]}}},
+
+    {"path": "/api/v3/statuses", "json": {"_type": "Collection", "total": 3, "count": 3, "_embedded": {"elements": [
+      {"id": 1, "name": "New", "isClosed": false}, {"id": 7, "name": "In progress", "isClosed": false},
+      {"id": 12, "name": "Closed", "isClosed": true}]}}},
+    {"path": "/api/v3/types", "json": {"_type": "Collection", "total": 3, "count": 3, "_embedded": {"elements": [
+      {"id": 1, "name": "Task", "isMilestone": false}, {"id": 2, "name": "Milestone", "isMilestone": true},
+      {"id": 9, "name": "Risk", "isMilestone": false}]}}},
+
+    {"path": "/api/v3/relations", "json": {"_type": "Collection", "total": 2, "count": 2, "_embedded": {"elements": [
+      {"type": "blocks", "_links": {"from": {"href": "/api/v3/work_packages/100"}, "to": {"href": "/api/v3/work_packages/200"}}},
+      {"type": "blocks", "_links": {"from": {"href": "/api/v3/work_packages/100"}, "to": {"href": "/api/v3/work_packages/101"}}}]}}},
+    {"path": "/api/v3/work_packages", "params": {"filters": "\"id\""}, "json": {"_type": "Collection", "total": 3, "count": 3, "_embedded": {"elements": [
+      {"id": 100, "_links": {"project": {"href": "/api/v3/projects/5"}}},
+      {"id": 101, "_links": {"project": {"href": "/api/v3/projects/5"}}},
+      {"id": 200, "_links": {"project": {"href": "/api/v3/projects/6"}}}]}}},
+    {"path": "/api/v3/work_packages", "params": {"filters": "\"type\""}, "json": {"_type": "Collection", "total": 2, "count": 2, "_embedded": {"elements": [
+      {"id": 400, "subject": "Vendor delay", "_links": {"project": {"href": "/api/v3/projects/5"}, "assignee": {"title": "Thida Win"},
+        "customField7": {"title": "High"}, "customField8": {"title": "High"}}},
+      {"id": 401, "subject": "No rating yet", "_links": {"project": {"href": "/api/v3/projects/6"}}}]}}}
+  ]
+}

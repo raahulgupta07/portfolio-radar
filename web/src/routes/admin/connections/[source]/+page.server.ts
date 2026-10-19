@@ -55,6 +55,22 @@ export const actions: Actions = {
 			return 'Status mapping saved. It applies from the next sync.';
 		});
 	},
+	saveFields: async ({ locals, request, params }) => {
+		const f = await request.formData();
+		const about: Any[] = JSON.parse(String(f.get('about') ?? '[]'));
+		const mapping: Record<string, unknown> = {};
+		for (const a of about) {
+			const v = String(f.get(`f_${a.field}`) ?? '').trim();
+			mapping[a.field] = a.kind === 'list' ? v.split(',').map((x) => x.trim()).filter(Boolean) : v;
+		}
+		const confirm = f.get('confirm') === 'on';
+		return act(async () => {
+			await adminCall(locals.token!, 'save_field_mapping', { source: params.source, mapping, confirm });
+			return confirm
+				? 'Field mapping saved and confirmed. The next live sync uses it.'
+				: 'Field mapping saved, not confirmed. The live sync waits until you confirm it.';
+		});
+	},
 	toolStatus: async ({ locals, request, params }) => {
 		const f = await request.formData();
 		const tool = str(f, 'tool');

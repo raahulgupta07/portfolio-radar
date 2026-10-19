@@ -1,0 +1,16 @@
+{
+  "base_url": "https://jira.city.local",
+  "requests": [
+    {"path": "/rest/api/2/project", "json": [
+      {"id": "10001", "key": "DAAI", "name": "CHL-IT-DAAI-014 Customer data platform", "lead": {"displayName": "Aye Aye"}}]},
+    {"path": "/rest/api/2/search", "params": {"jql": "statusCategory = \"To Do\"", "maxResults": "0"}, "json": {"total": 4, "issues": []}},
+    {"path": "/rest/api/2/search", "params": {"jql": "statusCategory = \"In Progress\"", "maxResults": "0"}, "json": {"total": 1, "issues": []}},
+    {"path": "/rest/api/2/search", "params": {"jql": "statusCategory = Done", "maxResults": "0"}, "json": {"total": 15, "issues": []}},
+    {"path": "/rest/api/2/search", "params": {"jql": "issueLinkType = blocks", "startAt": "0"}, "json": {
+      "startAt": 0, "maxResults": 1, "total": 2, "issues": [
+        {"key": "DAAI-12", "fields": {"issuelinks": [{"type": {"name": "Blocks"}, "outwardIssue": {"key": "CRM-4"}}]}}]}},
+    {"path": "/rest/api/2/search", "params": {"jql": "issueLinkType = blocks", "startAt": "1"}, "json": {
+      "startAt": 1, "maxResults": 1, "total": 2, "issues": [
+        {"key": "OPS-2", "fields": {"issuelinks": [{"type": {"name": "Blocks"}, "outwardIssue": {"key": "DAAI-9"}}]}}]}}
+  ]
+}

@@ -26,6 +26,7 @@ from app import integrations
 from app.adapter.readers import GatewayReader, SourceCallError
 from app.adapter.sync import APP_STATUSES, STATUS_MAP_KEY, load_status_map, match_prefix
 from app.connectors import SOURCES
+from app.connectors import fields as field_map
 from app.db import session_scope
 from app.integrations import GUID, Name
 from app.mcp import agents as agent_dir
@@ -55,6 +56,13 @@ def _http(ctx: ToolContext, timeout: float = 20) -> httpx.AsyncClient:
 def _today_start(ctx: ToolContext) -> datetime:
     tz = ZoneInfo(ctx.settings.timezone)
     return datetime.combine(datetime.now(tz).date(), time.min, tzinfo=tz).astimezone(UTC)
+
+
+def _changed(ctx: ToolContext, source_id: str | None = None) -> None:
+    """Make live connectors use a saved change at once instead of within a minute."""
+    for sid, c in (ctx.services.get("connectors") or {}).items():
+        if source_id in (None, sid) and hasattr(c, "invalidate"):
+            c.invalidate()
 
 
 def _err(e: ValidationError) -> ToolError:
@@ -142,6 +150,7 @@ async def get_source(args: SourceArg, ctx: ToolContext) -> dict:
         if row is None:
             raise ToolError(f"No source {args.source}")
         smap = await load_status_map(session, ctx.settings)
+        fields = await field_map.load(session, args.source)
         tools = (await session.scalars(select(McpTool).where(McpTool.server == args.source).order_by(McpTool.name))).all()
     mapping = []
     seen = set()
@@ -159,6 +168,9 @@ async def get_source(args: SourceArg, ctx: ToolContext) -> dict:
         "last_status": row.last_status, "last_error": row.last_error,
         "last_sync_at": row.last_sync_at.isoformat() if row.last_sync_at else None,
         "app_statuses": list(APP_STATUSES), "mapping": mapping, "unmapped": unmapped,
+        "fields": None if fields is None else {
+            "values": fields.fields, "confirmed_by": fields.confirmed_by, "confirmed_at": fields.confirmed_at,
+            "about": field_map.describe(args.source)},
         "tools": [{"tool": t.name, "status": t.status, "callers": t.callers, "roles": t.roles,
                    "description": t.description} for t in tools],
     }
@@ -189,6 +201,7 @@ async def save_source(args: SourceSettings, ctx: ToolContext) -> dict:
             raise ToolError(f"No source {args.source}")
         row.base_url, row.flavor, row.auth_method = args.base_url, args.flavor, args.auth_method
         row.account, row.secret_ref, row.enabled = args.account, args.secret_ref, args.enabled
+    _changed(ctx, args.source)
     return {"source": args.source, "saved": True}
 
 
@@ -206,6 +219,7 @@ async def set_secret(args: SecretValue, ctx: ToolContext) -> dict:
         await store.set(kv_name(args.ref), args.value.strip())
     except SecretError as e:
         raise ToolError(str(e)) from e
+    _changed(ctx)
     return {"ref": args.ref, "saved": True, "store": store.kind}
 
 
@@ -220,6 +234,13 @@ async def check_source(args: SourceArg, ctx: ToolContext) -> dict:
             raise ToolError(f"No source {args.source}")
         prefixes = [p.value for p in (await session.scalars(select(Prefix).where(Prefix.active.is_(True)))).all()]
         smap = await load_status_map(session, ctx.settings)
+        fields = await field_map.load(session, args.source)
+    if ctx.settings.source_mode == "live":
+        if fields is None:
+            checks.append({"check": "Connector", "ok": False, "detail": "No live connector yet: its API is needed"})
+        else:
+            checks.append({"check": "Field mapping", "ok": fields.confirmed,
+                           "detail": f"Confirmed by {fields.confirmed_by}" if fields.confirmed else "Not confirmed yet"})
     if ctx.settings.source_mode == "mock":
         checks.append({"check": "Data", "ok": True, "detail": "Sample data (SOURCE_MODE=mock)"})
     elif not row.secret_ref:
@@ -261,6 +282,25 @@ async def check_source(args: SourceArg, ctx: ToolContext) -> dict:
             src.unmapped_statuses = sorted(set(src.unmapped_statuses) | unmapped)
     return {"source": args.source, "ok": all(c["ok"] for c in checks if c["check"] != "Names with no prefix"),
             "checks": checks, "checked_at": started.isoformat(), "unmapped": sorted(unmapped)}
+
+
+class FieldMappingArgs(BaseModel):
+    source: Literal["jira", "openproject"]
+    mapping: dict[str, Any] = Field(description="Where each app field comes from; see get_source → fields.about")
+    confirm: bool = Field(False, description="True = a person checked this against the tracker. Live sync needs it")
+
+
+@server.tool(callers=CALLERS, roles=ROLES, input_model=FieldMappingArgs, read_only=False)
+async def save_field_mapping(args: FieldMappingArgs, ctx: ToolContext) -> dict:
+    """Save where a tracker keeps each project field (status, dates, owner, % done, strategy tag, risks).
+    A live sync uses it only once a person confirms it; saving without confirm clears the confirmation."""
+    try:
+        async with session_scope() as session:
+            m = await field_map.save(session, args.source, args.mapping, ctx.caller.id, args.confirm)
+    except ValidationError as e:
+        raise _err(e) from e
+    _changed(ctx, args.source)
+    return {"source": args.source, "saved": True, "confirmed": m.confirmed, "mapping": m.fields}
 
 
 class MappingArgs(BaseModel):
