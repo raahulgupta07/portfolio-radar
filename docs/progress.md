@@ -100,17 +100,52 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | Chat is MCP-only: the web app posts the question, the worker answers through MCP, the page picks it up |
 | 19 Oct 2026 | Connections are set up in Admin; secrets go to Key Vault by name only; Admin values win over environment variables |
 | 19 Oct 2026 | Web sign-in (client ID and secret) stays a web-container setting; the gateway side of SSO is set in Admin |
+| 19 Oct 2026 | Tracker field mapping is an admin choice confirmed by a person; live sync refuses until then |
+| 19 Oct 2026 | Services get their own rate limit (6,000/min): the sync makes about 4 calls per project |
+| 19 Oct 2026 | Worker jobs use one Azure managed identity each to sign in to the gateway |
+| 19 Oct 2026 | Teams chat answers go only to the person who asked, in a 1:1 chat, like the in-app chat; no approval needed for that. Digests still need approval |
+
+## Phase 13: live connectors ✅
+
+- [x] JIRA Cloud (REST v3, `search/jql`) and Data Center (REST v2), GET only, paging, retries
+- [x] OpenProject (API v3): projects, statuses, milestones, versions as sprints, work package counts, relations, risks
+- [x] Field mapping per tracker in Admin; a live sync reads project fields only after a person confirms it (nothing guessed)
+- [x] Live connectors rebuilt from Admin settings without a restart; token from the secret store
+- [x] Tests replay recorded responses (`backend/tests/recorded/`); `python -m app.connectors.record` records real ones
+- [ ] Multica: needs its API
+
+## Phase 14: load test ✅ (`docs/load-test.md`)
+
+- [x] 500 projects, a year of daily snapshots; overview page 1.2 s (target 3 s)
+- [x] Fixed: services hit the people rate limit during the sync; overview and project queries; dependency lookups; tile notes; gzip
+
+## Phase 15: PDF one-pagers ✅
+
+- [x] Project one-pager (A4) and portfolio one-pager for the Steering Committee (A4 landscape), drawn by the gateway
+
+## Phase 16: Azure ✅ (`docs/deploy-azure.md`)
+
+- [x] Bicep: Container Apps, private PostgreSQL, Key Vault, registry, one managed identity per part and per worker job
+- [x] Worker jobs sign in to the gateway with managed identities (no stored service tokens)
+- [x] GitHub Actions: CI (tests, type check, build, Bicep lint) and deploy (OIDC, `az acr build`, health check)
+- [ ] First deployment in City's subscription
+
+## Phase 17: security review ✅ (`docs/security-review.md`)
+
+## Phase 18: Teams chat ✅ (`docs/teams-bot.md`)
+
+- [x] 1:1 chat with Radar in Teams through the gateway; Microsoft's token checked; City tenant only
+- [x] Answers go back to the same chat only; digests still need approval
+- [ ] First real test with City's bot registration
 
 ## Still open (needs input or access)
 
-- [ ] Real JIRA and OpenProject connectors (`SOURCE_MODE=live`) — need hosting details and read-only tokens
+- [ ] JIRA and OpenProject read-only tokens, then confirm the field mapping in Admin
 - [ ] Multica connector — need to know its API
 - [ ] City SSO switched on — need the Entra ID app registrations, group IDs for admin and approver
 - [ ] LLM endpoint for Radar's wording and chat (CityGPT, Azure OpenAI or Claude)
-- [ ] Teams webhook and SMTP for sending approved drafts
-- [ ] Two-way Teams chat with Radar
-- [ ] Load test: overview under 3 s with 500 projects
-- [ ] PDF one-pager: today the browser's print to PDF is used
+- [ ] Teams webhook, Teams bot registration and SMTP
+- [ ] Azure subscription and resource group for the first deployment
 
 ## Open questions
 

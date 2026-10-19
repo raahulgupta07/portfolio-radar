@@ -33,6 +33,19 @@ test('project detail links to the source tool to edit', async ({ page }) => {
 	await expect(page.getByText('Vendor contract delayed')).toBeVisible();
 });
 
+test('one-pager PDFs for a project and the portfolio', async ({ page }) => {
+	await signIn(page, 'dev-viewer');
+	await page.goto('/projects/CHL-DP-POS03');
+	const href = await page.getByRole('link', { name: 'One-pager PDF of this project' }).getAttribute('href');
+	for (const url of [href!, '/export/portfolio.pdf']) {
+		const r = await page.request.get(url);
+		expect(r.status()).toBe(200);
+		expect(r.headers()['content-type']).toBe('application/pdf');
+		expect((await r.body()).subarray(0, 4).toString()).toBe('%PDF');
+	}
+	expect((await page.request.get('/projects/NOPE-1/one-pager.pdf')).status()).toBe(404);
+});
+
 test('viewer cannot approve; approver approves the digest', async ({ page }) => {
 	await signIn(page, 'dev-viewer');
 	await page.goto('/radar');

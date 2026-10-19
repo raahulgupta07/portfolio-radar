@@ -1,6 +1,6 @@
 # Architecture
 
-Version 3.2 · 19 Oct 2026 · MCP-first · as built
+Version 3.3 · 19 Oct 2026 · MCP-first · as built
 
 Teams keep their own trackers. Everything lands in the **City MCP Gateway** first:
 source data comes in through MCP, and the web app, Radar, other agents and the
@@ -109,6 +109,20 @@ Admin → Connections, MCP tools, Agents and Activity are screens over `/admin/m
   credentials), with the servers each may use and its rate limit. The guard enforces
   both; tool rules still apply, so an agent can never approve or send. Agents and SSO
   rules are held in memory, refreshed on every change and every 30 seconds.
+
+## Live trackers, Teams chat and hosting (v3.3)
+
+- **Live connectors** (`SOURCE_MODE=live`): JIRA Cloud (REST v3) and Data Center (REST v2), OpenProject (API v3).
+  Each source is built from its Admin settings on first use and rebuilt when they change. Where each app field comes
+  from (status, dates, owner, % done, strategy tag, risks) is a **field mapping** an admin fills in and a person
+  confirms; until then a live sync lists projects but reads no fields. Multica stays mock-only until its API is known.
+- **Teams chat**: Teams → web `/api/teams/messages` (forwards only) → gateway `/teams/messages` (checks
+  Microsoft's token, City tenant, 1:1 chat) → `radar.ask_from_teams` as service `teams` → Radar answers through
+  MCP → the notifier returns the answer to the same chat (`notify.teams_replies`). See `docs/teams-bot.md`.
+- **PDF one-pagers**: `portfolio.get_project_pdf` and `portfolio.get_overview_pdf`, people only.
+- **Azure**: Container Apps (gateway internal by default, worker, web), private PostgreSQL, Key Vault, one managed
+  identity per part and per worker job; the jobs sign in to the gateway with Entra tokens from their identities.
+  See `docs/deploy-azure.md`.
 
 ## Daily flow
 
