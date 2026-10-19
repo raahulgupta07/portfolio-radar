@@ -98,6 +98,9 @@ async def _services(ctx: ToolContext, session) -> dict[str, Any]:
         out[name] = {"status": _service_status(name, cfg, secret_ok), "saved_in_admin": saved,
                      "config": cfg.model_dump(mode="json"),
                      **({"secret_set": secret_ok} if ref else {})}
+        if name == "teams":  # two-way chat, separate from the webhook
+            out[name]["bot_status"] = ("not_set" if not cfg.bot_ready() else
+                                       "ready" if await is_set(store, cfg.bot_password_ref) else "secret_missing")
     return out
 
 
@@ -394,13 +397,43 @@ async def _test_llm(cfg, ctx) -> tuple[bool, str]:
 
 
 async def _test_teams(cfg, ctx) -> tuple[bool, str]:
-    url = await resolve(_store(ctx), cfg.webhook_ref)
-    if not url:
-        return False, "The webhook secret is empty. Paste the webhook URL first"
-    async with _http(ctx) as c:
-        r = await c.post(url, json={"text": f"Test from Portfolio Radar Admin, sent by {ctx.caller.id}. "
-                                            "Radar sends here only after a person approves."})
-    return (r.status_code < 300, "Test message sent" if r.status_code < 300 else f"Teams answered HTTP {r.status_code}")
+    """The webhook gets one test message; the chat bot (if set) signs in to the Bot Framework."""
+    if not cfg.webhook_ref and not cfg.bot_ready():
+        return False, "Set the webhook, the chat bot, or both"
+    parts, ok = [], True
+    if cfg.webhook_ref:
+        url = await resolve(_store(ctx), cfg.webhook_ref)
+        if not url:
+            ok = False
+            parts.append("Webhook: the secret is empty. Paste the webhook URL first")
+        else:
+            async with _http(ctx) as c:
+                r = await c.post(url, json={"text": f"Test from Portfolio Radar Admin, sent by {ctx.caller.id}. "
+                                                    "Radar sends here only after a person approves."})
+            ok = ok and r.status_code < 300
+            parts.append("Webhook: test message sent" if r.status_code < 300 else f"Webhook: Teams answered HTTP {r.status_code}")
+    if cfg.bot_ready():
+        from app.teams.botframework import BotAuthError, BotConnector
+
+        async with session_scope() as session:
+            sso, _ = await integrations.load(session, "sso", ctx.settings)
+        password = await resolve(_store(ctx), cfg.bot_password_ref)
+        if not sso.tenant_id:
+            ok = False
+            parts.append("Chat bot: set the City tenant under Sign-in first")
+        elif not password:
+            ok = False
+            parts.append("Chat bot: the client secret is empty")
+        else:
+            bot = BotConnector(cfg.bot_app_id, password, sso.tenant_id, transport=ctx.services.get("http_transport"))
+            try:
+                async with _http(ctx) as c:
+                    await bot._bearer(c)
+                parts.append("Chat bot: signed in to the Bot Framework")
+            except BotAuthError as e:
+                ok = False
+                parts.append(f"Chat bot: {e}")
+    return ok, ". ".join(parts)
 
 
 async def _test_email(cfg, ctx) -> tuple[bool, str]:

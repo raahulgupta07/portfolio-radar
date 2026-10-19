@@ -258,7 +258,7 @@ async def test_agent_set_up_in_admin_is_limited_to_its_servers(gw):
     agents = await ok(gw, ADMIN, "admin", "list_agents")
     assert [a["caller_id"] for a in agents["agents"]] == ["claude-for-pmo"]
     assert agents["agents"][0]["calls_today"] >= 3
-    assert {b["caller_id"] for b in agents["built_in"]} == {"radar", "radar-job", "adapter", "notifier"}
+    assert {b["caller_id"] for b in agents["built_in"]} == {"radar", "radar-job", "adapter", "notifier", "teams"}
 
     await ok(gw, ADMIN, "admin", "set_agent_enabled", {"id": saved["id"], "enabled": False})
     assert gw.services["directory"].app(APP_ID) is None

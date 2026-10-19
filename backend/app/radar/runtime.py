@@ -53,10 +53,12 @@ async def _channels(reader: SourceReader, settings: Settings, store: SecretStore
         teams, email = ch["teams"], ch["email"]
         webhook = await resolve(store, teams.get("webhook_ref", ""))
         password = await resolve(store, email.get("password_ref", ""))
+        bot_password = await resolve(store, teams.get("bot_password_ref", ""))
     except (SourceCallError, SecretError) as e:
         log.warning("Channel settings from Admin not used: %s", e)
         return settings
     return settings.model_copy(update={
         "teams_webhook_url": webhook, "smtp_host": email["smtp_host"], "smtp_port": email["smtp_port"],
         "smtp_user": email["username"], "smtp_password": password, "smtp_from": email["sender"],
-        "notify_email_to": email["recipients"]})
+        "notify_email_to": email["recipients"], "teams_bot_app_id": teams.get("bot_app_id", ""),
+        "teams_bot_password": bot_password, "entra_tenant_id": ch.get("tenant_id") or settings.entra_tenant_id})

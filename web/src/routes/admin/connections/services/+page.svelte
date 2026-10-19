@@ -128,9 +128,21 @@
 			<form class="form" method="POST" action="?/saveTeams" use:enhance={submitting('teams')}>
 				{@render secretField('Incoming webhook URL', 'webhook_ref', teams.webhook_ref, !!sv.teams.secret_set, 'webhook', 'Paste the webhook URL', 'kv://teams-webhook')}
 				<label class="lab">Channel name (for people)<input class="inp" name="channel" value={teams.channel} placeholder="#steerco-portfolio" /></label>
+				<div class="hrow" style="margin-top:6px">
+					<h3 style="margin:0;font-size:15px">Chat with Radar in Teams</h3>
+					<span class="st st-{sv.teams.bot_status === 'ready' ? 'on' : sv.teams.bot_status === 'secret_missing' ? 'review' : 'off'}" style="margin-left:auto">
+						{sv.teams.bot_status === 'ready' ? 'ready' : sv.teams.bot_status === 'secret_missing' ? 'secret missing' : 'off'}
+					</span>
+				</div>
+				<p class="sub" style="margin:0">
+					People message Radar in a 1:1 chat and get answers there. Radar answers only the person who asked; digests still need approval.
+					Needs an Azure Bot whose messaging endpoint is <span class="mono">{data.teamsEndpoint}</span>.
+				</p>
+				<label class="lab">Bot app ID<input class="inp mono" name="bot_app_id" value={teams.bot_app_id} placeholder="00000000-0000-0000-0000-000000000000" pattern="[0-9a-fA-F\-]{'{36}'}" autocomplete="off" /></label>
+				{@render secretField('Bot client secret', 'bot_password_ref', teams.bot_password_ref, sv.teams.bot_status === 'ready', 'bot_password', 'Paste the client secret', 'kv://teams-bot-password')}
 				<div class="btns"><button class="btn dark" disabled={busy !== ''}>Save</button></div>
 			</form>
-			{@render testBtn('teams', 'Send a test message')}
+			{@render testBtn('teams', 'Test webhook and bot')}
 		</section>
 
 		<section class="card col" id="email" aria-labelledby="email-h">
@@ -149,6 +161,6 @@
 			{@render testBtn('email', 'Send a test email to me')}
 		</section>
 
-		<div class="gw" style="display:block;padding:16px 20px;font-size:13px;line-height:1.5">Nothing is sent until a named approver says yes. Teams and email get approved drafts only, through <span class="mono">/notify/mcp</span>.</div>
+		<div class="gw" style="display:block;padding:16px 20px;font-size:13px;line-height:1.5">Nothing is sent until a named approver says yes. Teams and email get approved drafts only, through <span class="mono">/notify/mcp</span>. The one exception is chat: Radar's answer goes back to the person who asked, in the same 1:1 chat, as in the app.</div>
 	</div>
 </div>

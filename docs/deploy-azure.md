@@ -104,6 +104,7 @@ reviewers if you want a person to approve each deployment). Then add:
 | Variable | `WEB_CLIENT_ID` | web app client ID (step 1b) |
 | Variable | `WEB_API_SCOPE` | `api://city-mcp-gateway/access` |
 | Variable | `WEB_ORIGIN` | `https://portfolio.cityholdings.com.mm`, or empty for the Azure address |
+| Variable | `TEAMS_BOT_APP_ID` | optional: the Radar bot app ID for Teams chat (docs/teams-bot.md) |
 | Secret | `POSTGRES_ADMIN_PASSWORD` | a long random password (only Key Vault and the database see it) |
 | Secret | `WEB_CLIENT_SECRET` | from step 1b |
 

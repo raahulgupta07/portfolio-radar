@@ -14,8 +14,8 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy import text
 
@@ -27,6 +27,7 @@ from app.mcp.registry import Registry
 from app.mcp.servers import build_registry, build_services
 from app.mcp.transport import RequireToken, build_mcp_server
 from app.settings import Settings, get_settings
+from app.teams.endpoint import TeamsBot
 
 log = logging.getLogger("mcp.gateway")
 
@@ -89,6 +90,13 @@ def create_app(settings: Settings | None = None, registry: Registry | None = Non
         except Exception as e:  # noqa: BLE001
             return JSONResponse({"status": "not ready", "error": type(e).__name__}, status_code=503)
         return JSONResponse({"status": "ready", "servers": sorted(registry.servers)})
+
+    teams_bot = TeamsBot(gateway)
+
+    @app.post("/teams/messages")
+    async def teams_messages(request: Request) -> Response:
+        """Messages from Microsoft Teams (two-way chat with Radar). Checked against Microsoft's token."""
+        return await teams_bot.handle(request)
 
     for name, srv in mcp_servers.items():
         http_app = srv.streamable_http_app(

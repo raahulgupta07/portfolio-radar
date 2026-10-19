@@ -1,7 +1,8 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { SESSION_COOKIE, USER_COOKIE } from '$lib/server/auth';
 
-const PUBLIC = ['/login', '/auth/', '/healthz'];
+// /api/teams/messages: Microsoft Teams, checked by the gateway against Microsoft's token.
+const PUBLIC = ['/login', '/auth/', '/healthz', '/api/teams/messages'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE) ?? null;

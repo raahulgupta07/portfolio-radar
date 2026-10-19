@@ -24,7 +24,9 @@ BUILT_IN = [
     {"caller_id": "adapter", "name": "Nightly sync", "kind": "service", "servers": ["jira", "openproject", "multica"],
      "what": "Reads the trackers"},
     {"caller_id": "notifier", "name": "Notifier", "kind": "service", "servers": ["notify"],
-     "what": "Sends drafts a person approved"},
+     "what": "Sends drafts a person approved, and Radar's answers to Teams chats"},
+    {"caller_id": "teams", "name": "Teams bot", "kind": "service", "servers": ["radar"],
+     "what": "Passes people's 1:1 Teams messages to Radar, after Microsoft's token is checked"},
 ]
 
 

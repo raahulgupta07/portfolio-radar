@@ -75,6 +75,9 @@ class Settings(BaseSettings):
 
     # Notifier channels. Empty = not set up (dev writes to the log instead).
     teams_webhook_url: str = ""
+    # Two-way Teams chat (Azure Bot). Usually set in Admin → Connections → Teams instead.
+    teams_bot_app_id: str = ""
+    teams_bot_password: str = ""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

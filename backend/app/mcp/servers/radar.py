@@ -185,6 +185,34 @@ async def ask_radar(args: AskArgs, ctx: ToolContext) -> dict:
         return {"message_id": m.id, "state": "pending"}
 
 
+class TeamsAsk(BaseModel):
+    user: str = Field(min_length=3, max_length=200, pattern=r"^[^@\s]+@[^@\s]+$",
+                      description="The sender's City account (user principal name), from Teams")
+    text: str = Field(min_length=1, max_length=2000)
+    service_url: str = Field(max_length=300, description="Where Teams wants the reply")
+    conversation_id: str = Field(max_length=300)
+    activity_id: str = Field("", max_length=200)
+
+
+@server.tool(callers={"service"}, roles={"teams"}, input_model=TeamsAsk, read_only=False, redact=False)
+async def ask_from_teams(args: TeamsAsk, ctx: ToolContext) -> dict:
+    """A person's message to Radar in a Teams 1:1 chat, passed on by the Teams bot after Microsoft's token was
+    checked. It joins that person's conversation; the notifier sends Radar's answer back to the same chat."""
+    from app.teams.botframework import BotAuthError, safe_service_url
+
+    try:
+        service_url = safe_service_url(args.service_url)
+    except BotAuthError as e:
+        raise ToolError(str(e)) from e
+    async with session_scope() as session:
+        m = RadarMessage(user_id=args.user, kind="me", body=args.text.strip(), state="pending", payload_json={
+            "origin": "teams", "teams": {"service_url": service_url, "conversation_id": args.conversation_id,
+                                         "activity_id": args.activity_id}})
+        session.add(m)
+        await session.flush()
+        return {"message_id": m.id, "state": "pending"}
+
+
 class AnswerArgs(BaseModel):
     message_id: int
     answer: Literal["yes", "no"]

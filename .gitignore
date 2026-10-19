@@ -7,3 +7,4 @@ node_modules/
 *.bundle
 .secrets/
 backend/loadtest/sample-500.json
+teams/radar-teams.zip

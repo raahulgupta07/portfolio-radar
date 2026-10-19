@@ -3,6 +3,8 @@
 
 Channels:
 - Microsoft Teams: an incoming webhook (TEAMS_WEBHOOK_URL)
+- Teams chat: Radar's answers to questions people asked the bot in a 1:1 chat go back to that chat
+  (deliver_teams_replies). Like the chat in the app, these need no approval: they go only to the person who asked
 - Email: SMTP (SMTP_HOST ...), to NOTIFY_EMAIL_TO
 - Dev outbox: when no channel is set and APP_ENV=dev, messages are written to
   the log instead, so the flow can be tried end to end
@@ -19,6 +21,7 @@ import httpx
 
 from app.adapter.readers import SourceReader
 from app.settings import Settings
+from app.teams.botframework import BotAuthError, BotConnector
 
 log = logging.getLogger("notifier")
 
@@ -61,6 +64,39 @@ async def send_one(settings: Settings, item: dict) -> tuple[bool, list[str], str
         else:
             errors.append("No channel set up (TEAMS_WEBHOOK_URL or SMTP_HOST)")
     return bool(sent) and not errors, sent, "; ".join(errors)
+
+
+_bot: tuple[tuple[str, str, str], BotConnector] | None = None
+
+
+def _connector(settings: Settings, transport: httpx.AsyncBaseTransport | None) -> BotConnector | None:
+    """The Teams bot connector, kept between runs so its sign-in token is reused."""
+    global _bot
+    key = (settings.teams_bot_app_id, settings.teams_bot_password, settings.entra_tenant_id)
+    if not all(key):
+        return None
+    if _bot is None or _bot[0] != key or transport is not None:
+        _bot = (key, BotConnector(*key, transport=transport))
+    return _bot[1]
+
+
+async def deliver_teams_replies(reader: SourceReader, settings: Settings,
+                                transport: httpx.AsyncBaseTransport | None = None) -> int:
+    """Radar's answers to questions asked in Teams, back to the same 1:1 chat."""
+    connector = _connector(settings, transport)
+    if connector is None:
+        return 0
+    replies = (await reader.call("notify", "teams_replies"))["replies"]
+    for r in replies:
+        try:
+            await connector.send(r["service_url"], r["conversation_id"], r["text"], r.get("reply_to_activity"))
+            ok, detail = True, ""
+        except (BotAuthError, httpx.HTTPError) as e:
+            ok, detail = False, f"{type(e).__name__}: {e}"[:300]
+        await reader.call("notify", "mark_teams_sent", {"message_id": r["message_id"], "ok": ok, "detail": detail})
+        if not ok:
+            log.warning("Teams answer %s not delivered: %s", r["message_id"], detail)
+    return len(replies)
 
 
 async def run_notifier(reader: SourceReader, settings: Settings) -> int:

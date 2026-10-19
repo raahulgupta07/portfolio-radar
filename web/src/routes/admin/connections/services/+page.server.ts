@@ -2,9 +2,11 @@ import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types';
 import { act, adminCall, loadOrError, str, type Any } from '$lib/server/admin';
 
-export const load: PageServerLoad = async ({ locals }) =>
+export const load: PageServerLoad = async ({ locals, url }) =>
 	loadOrError(async () => ({
 		i: await adminCall(locals.token!, 'get_integrations'),
+		// What to enter as the Azure Bot's messaging endpoint.
+		teamsEndpoint: `${env.ORIGIN || url.origin}/api/teams/messages`,
 		// Sign-in itself happens in the web app; these stay settings of the web container.
 		web: {
 			client_id: env.ENTRA_CLIENT_ID ?? '',
@@ -55,8 +57,19 @@ export const actions: Actions = {
 	},
 	saveTeams: async ({ locals, request }) => {
 		const f = await request.formData();
-		const config = { webhook_ref: str(f, 'webhook_ref'), channel: str(f, 'channel') };
+		const config: Any = {
+			webhook_ref: str(f, 'webhook_ref'),
+			channel: str(f, 'channel'),
+			bot_app_id: str(f, 'bot_app_id'),
+			bot_password_ref: str(f, 'bot_password_ref')
+		};
+		const botSecret = String(f.get('bot_password') ?? '');
 		return act(async () => {
+			// Both secrets go straight to the secret store; only their names are saved.
+			if (botSecret) {
+				config.bot_password_ref ||= 'kv://teams-bot-password';
+				await adminCall(locals.token!, 'set_secret', { ref: config.bot_password_ref, value: botSecret });
+			}
 			await saveWithSecret(locals.token!, 'teams', config, { field: 'webhook_ref', value: String(f.get('webhook') ?? ''), fallback: 'kv://teams-webhook' });
 			return 'Teams saved.';
 		});

@@ -31,6 +31,7 @@ jobs:
       WEB_CLIENT_ID: ${{ vars.WEB_CLIENT_ID }}
       WEB_API_SCOPE: ${{ vars.WEB_API_SCOPE }}
       WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+      TEAMS_BOT_APP_ID: ${{ vars.TEAMS_BOT_APP_ID }}
     steps:
       - uses: actions/checkout@v4
 

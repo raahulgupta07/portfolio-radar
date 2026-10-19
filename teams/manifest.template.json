@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "{{BOT_APP_ID}}",
+  "developer": {
+    "name": "City Holdings IT",
+    "websiteUrl": "{{WEB_ORIGIN}}",
+    "privacyUrl": "{{WEB_ORIGIN}}",
+    "termsOfUseUrl": "{{WEB_ORIGIN}}"
+  },
+  "name": { "short": "Radar", "full": "Radar · Portfolio Radar" },
+  "description": {
+    "short": "Ask Radar about City Holdings projects.",
+    "full": "Radar checks every City Holdings digital project each night. Ask what is off track, how a project is doing, or what changed this week. Answers show their evidence. Read-only: Radar cannot change projects, and digests still need a person's approval in the app."
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#7FD69A",
+  "bots": [
+    {
+      "botId": "{{BOT_APP_ID}}",
+      "scopes": ["personal"],
+      "supportsFiles": false,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal"],
+          "commands": [
+            { "title": "What is off track?", "description": "Projects off track, with reasons" },
+            { "title": "What changed this week?", "description": "Changes since last week" },
+            { "title": "How is LOYAL02?", "description": "One project: health, progress, next milestone" }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["{{WEB_HOST}}"]
+}

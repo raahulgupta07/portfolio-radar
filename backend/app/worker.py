@@ -4,7 +4,7 @@ MCP gateway, each job with its own token:
 - adapter (service):   nightly sync at the admin's sync time (default 02:00)
 - radar-job (service): Radar's check right after the sync; Monday stale check
 - radar (agent):       answers people's questions, every few seconds
-- notifier (service):  sends approved drafts, every minute
+- notifier (service):  sends approved drafts, every minute; Radar's Teams chat answers, every few seconds
 
     python -m app.worker
 """
@@ -22,7 +22,7 @@ from app.adapter.sync import sync_all
 from app.health import today_in
 from app.radar.assistant import answer_pending
 from app.radar.job import act_on_answers, run_check
-from app.radar.notifier import run_notifier
+from app.radar.notifier import deliver_teams_replies, run_notifier
 from app.radar.runtime import with_channels, with_llm
 from app.secretstore import build_secret_store
 from app.servicetokens import Job, ServiceTokens
@@ -108,11 +108,18 @@ async def main() -> None:
         async with reader(settings, "notifier") as r:
             await run_notifier(r, await with_channels(r, settings, store))
 
+    async def teams() -> None:
+        async with reader(settings, "notifier") as r:
+            channels = await with_channels(r, settings, store)
+            if channels.teams_bot_app_id:
+                await deliver_teams_replies(r, channels)
+
     await asyncio.gather(
         loop("schedule", 300, lambda: schedule_from_admin(scheduler, settings)),
         loop("chat", 3, chat),
         loop("answers", 10, answers),
         loop("notifier", 60, notify),
+        loop("teams", 3, teams),
     )
 
 

@@ -58,9 +58,15 @@ class LlmConfig(BaseModel):
 class TeamsConfig(BaseModel):
     webhook_ref: str = Field("", pattern=REF_PATTERN, description="The webhook URL is a secret")
     channel: str = Field("", max_length=100)
+    # Two-way chat: people message Radar in Teams (docs/teams-bot.md). Empty = chat in the app only.
+    bot_app_id: str = Field("", pattern=GUID, description="The Azure Bot's Microsoft app ID")
+    bot_password_ref: str = Field("", pattern=REF_PATTERN, description="The bot app's client secret, by name")
 
     def ready(self) -> bool:
         return bool(self.webhook_ref)
+
+    def bot_ready(self) -> bool:
+        return bool(self.bot_app_id and self.bot_password_ref)
 
 
 class EmailConfig(BaseModel):
@@ -98,7 +104,9 @@ def from_env(name: str, env: Settings) -> BaseModel:
         return LlmConfig(base_url=env.llm_base_url, model=env.llm_model,
                          api_key_ref="env://LLM_API_KEY" if env.llm_api_key else "")
     if name == "teams":
-        return TeamsConfig(webhook_ref="env://TEAMS_WEBHOOK_URL" if env.teams_webhook_url else "")
+        return TeamsConfig(webhook_ref="env://TEAMS_WEBHOOK_URL" if env.teams_webhook_url else "",
+                           bot_app_id=env.teams_bot_app_id,
+                           bot_password_ref="env://TEAMS_BOT_PASSWORD" if env.teams_bot_password else "")
     if name == "email":
         return EmailConfig(smtp_host=env.smtp_host, smtp_port=env.smtp_port, username=env.smtp_user,
                            password_ref="env://SMTP_PASSWORD" if env.smtp_password else "",

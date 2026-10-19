@@ -57,6 +57,9 @@ param gatewayExternal bool = false
 @description('IP ranges allowed to reach the web app (CIDR). Empty = anyone; City SSO still guards every page.')
 param webAllowedIps array = []
 
+@description('Two-way Teams chat: the bot app registration client ID. Empty = no Azure Bot. Its secret is pasted in Admin → Connections → Teams')
+param teamsBotAppId string = ''
+
 param timezone string = 'Asia/Yangon'
 
 param tags object = {
@@ -445,12 +448,42 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
   dependsOn: [pullRoles, kvReaders, gateway]
 }
 
+// -- Teams chat (docs/teams-bot.md) ----------------------------------------------------------
+
+resource bot 'Microsoft.BotService/botServices@2022-09-15' = if (deployApps && !empty(teamsBotAppId)) {
+  name: 'bot-${name}-${suffix}'
+  location: 'global'
+  kind: 'azurebot'
+  sku: { name: 'F0' }
+  tags: tags
+  properties: {
+    displayName: 'Radar'
+    description: 'Ask Radar about City Holdings projects'
+    endpoint: '${origin}/api/teams/messages'
+    msaAppId: teamsBotAppId
+    msaAppType: 'SingleTenant'
+    msaAppTenantId: entraTenantId
+    disableLocalAuth: false
+  }
+}
+
+resource botTeams 'Microsoft.BotService/botServices/channels@2022-09-15' = if (deployApps && !empty(teamsBotAppId)) {
+  parent: bot
+  name: 'MsTeamsChannel'
+  location: 'global'
+  properties: {
+    channelName: 'MsTeamsChannel'
+    properties: { isEnabled: true }
+  }
+}
+
 // -- outputs ---------------------------------------------------------------------------------
 
 output registry string = acr.properties.loginServer
 output keyVaultUrl string = kv.properties.vaultUri
 output webUrl string = origin
 output webRedirectUri string = '${origin}/auth/callback'
+output teamsMessagingEndpoint string = '${origin}/api/teams/messages'
 output gatewayUrl string = gatewayExternal ? 'https://${gatewayPublicHost}' : 'http://${gatewayAppName} (inside the environment only)'
 @description('Give these managed identities access to the gateway API in Entra (they sign in as the worker jobs)')
 output workerJobIdentities object = {
