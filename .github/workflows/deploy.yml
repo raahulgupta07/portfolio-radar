@@ -1,0 +1,68 @@
+name: Deploy to Azure
+
+# Runs by hand, or on every push to main once the AZURE_* variables are set.
+# Signs in to Azure with OpenID Connect (no stored Azure password): see docs/deploy-azure.md, step 3.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.AZURE_RESOURCE_GROUP != ''
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      RG: ${{ vars.AZURE_RESOURCE_GROUP }}
+      IMAGE_TAG: ${{ github.sha }}
+      POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+      WEB_CLIENT_SECRET: ${{ secrets.WEB_CLIENT_SECRET }}
+      ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
+      GATEWAY_AUDIENCE: ${{ vars.GATEWAY_AUDIENCE }}
+      GATEWAY_SCOPE: ${{ vars.GATEWAY_SCOPE }}
+      WEB_CLIENT_ID: ${{ vars.WEB_CLIENT_ID }}
+      WEB_API_SCOPE: ${{ vars.WEB_API_SCOPE }}
+      WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Registry, database and Key Vault (apps unchanged)
+        id: base
+        env:
+          DEPLOY_APPS: "false"
+        run: |
+          acr=$(az deployment group create -g "$RG" -n "base-$IMAGE_TAG" -p infra/main.bicepparam \
+                --query properties.outputs.registry.value -o tsv)
+          echo "acr=${acr%%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Build images in the registry
+        run: |
+          az acr build -r "${{ steps.base.outputs.acr }}" -t "portfolio-radar-mcp:$IMAGE_TAG" -f backend/Dockerfile .
+          az acr build -r "${{ steps.base.outputs.acr }}" -t "portfolio-radar-web:$IMAGE_TAG" -f web/Dockerfile .
+
+      - name: Gateway, worker and web on the new images
+        env:
+          DEPLOY_APPS: "true"
+        run: |
+          az deployment group create -g "$RG" -n "apps-$IMAGE_TAG" -p infra/main.bicepparam \
+            --query properties.outputs -o json
+
+      - name: Check the web app answers
+        run: |
+          url=$(az deployment group show -g "$RG" -n "apps-$IMAGE_TAG" --query properties.outputs.webUrl.value -o tsv)
+          for i in 1 2 3 4 5 6; do curl -fsS "$url/healthz" && exit 0; sleep 20; done
+          exit 1

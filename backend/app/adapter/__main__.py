@@ -19,6 +19,7 @@ from app.health import today_in
 from app.mcp.guard import Gateway
 from app.mcp.identity import TokenResolver
 from app.mcp.servers import build_registry, build_services
+from app.servicetokens import ServiceTokens
 from app.settings import get_settings
 
 
@@ -48,8 +49,10 @@ async def main() -> None:
         caller = TokenResolver(settings).resolve(f"Bearer {settings.adapter_token}")
         summary = await sync_all(GatewayReader(gateway, caller), settings, today, args.source)
     else:
-        async with McpHttpReader(settings.gateway_url, settings.adapter_token) as reader:
+        tokens = ServiceTokens(settings)
+        async with McpHttpReader(settings.gateway_url, await tokens.get("adapter")) as reader:
             summary = await sync_all(reader, settings, today, args.source)
+        await tokens.aclose()
     print(json.dumps(summary.as_dict(), indent=2))
 
 

@@ -40,8 +40,15 @@ class Settings(BaseSettings):
     # Fix "today" for demos and tests (YYYY-MM-DD). Empty = the real date in `timezone`.
     today: str = ""
 
-    # How the worker reaches the gateway (MCP over HTTP) and the service tokens it uses.
+    # How the worker reaches the gateway (MCP over HTTP) and how its jobs sign in (app/servicetokens.py).
     gateway_url: str = "http://localhost:8000"
+    # token: the fixed *_TOKEN values below (dev). managed_identity: Entra tokens from Azure managed identities.
+    service_auth: Literal["token", "managed_identity"] = "token"
+    gateway_scope: str = ""  # e.g. api://city-mcp-gateway/.default
+    adapter_client_id: str = ""
+    radar_job_client_id: str = ""
+    radar_agent_client_id: str = ""
+    notifier_client_id: str = ""
     adapter_token: str = "dev-adapter"
 
     # City SSO (Microsoft Entra ID). When ENTRA_TENANT_ID is set, the gateway accepts Entra access tokens.

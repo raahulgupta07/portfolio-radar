@@ -86,3 +86,33 @@ def test_agents_and_sso_rules_saved_in_admin_apply_without_restart():
     directory.set({}, directory.sso)  # agent turned off in Admin
     with pytest.raises(UnknownToken, match="not allowed"):
         resolver.resolve("Bearer " + token(idtyp="app", azp="app-claude"))
+
+
+async def test_worker_jobs_sign_in_with_their_own_managed_identity():
+    from app.servicetokens import ServiceTokens
+
+    class FakeCredential:
+        def __init__(self, client_id):
+            self.client_id, self.calls = client_id, 0
+
+        async def get_token(self, scope):
+            self.calls += 1
+            return type("T", (), {"token": f"{self.client_id}|{scope}"})()
+
+    made = []
+
+    def factory(cid):
+        made.append(cid)
+        return FakeCredential(cid)
+
+    dev = ServiceTokens(make_settings())
+    assert await dev.get("adapter") == "dev-adapter"
+    s = make_settings(service_auth="managed_identity", gateway_scope="api://city-mcp-gateway/.default",
+                      adapter_client_id="id-adapter", notifier_client_id="id-notifier")
+    tokens = ServiceTokens(s, credential=factory)
+    assert await tokens.get("adapter") == "id-adapter|api://city-mcp-gateway/.default"
+    assert await tokens.get("notifier") == "id-notifier|api://city-mcp-gateway/.default"
+    await tokens.get("adapter")
+    assert made == ["id-adapter", "id-notifier"]  # one credential per identity, reused
+    with pytest.raises(RuntimeError, match="radar"):
+        await tokens.get("radar")

@@ -3,3 +3,13 @@
 **/.pytest_cache
 **/.env
 **/node_modules
+**/.secrets
+*.bundle
+.git
+web/build
+web/.svelte-kit
+web/test-results
+backend/tests
+backend/loadtest
+docs
+infra
