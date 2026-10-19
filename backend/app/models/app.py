@@ -142,6 +142,21 @@ class Snapshot(Base):
     status: Mapped[str] = mapped_column(String(20))
     health: Mapped[str | None] = mapped_column(String(12), nullable=True)
     percent_done: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Milestone due dates and task counts on that day, for "what changed this week".
+    detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class Setting(Base):
+    """Settings an admin changes in the app (schedule, Radar rules, alerts).
+    Values here override the environment defaults."""
+
+    __tablename__ = "setting"
+    __table_args__ = {"schema": SCHEMA}
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[Any] = mapped_column(JSON)
+    updated_by: Mapped[str] = mapped_column(String(200))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class SyncRun(Base):

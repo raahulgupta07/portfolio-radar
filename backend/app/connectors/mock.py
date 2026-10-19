@@ -51,7 +51,12 @@ class MockConnector:
             raise ValueError(f"No source {source_id!r} in sample data")
         self._as_of = datetime.fromisoformat(self._data["as_of"])
         self._projects = {p["code"]: p for p in self._data["projects"] if p["source"] == source_id}
+        self._extra: dict[str, dict[str, Any]] = {}
         self._non_compliant = [n for n in self._data.get("non_compliant", []) if n["source"] == source_id]
+        # Badly named projects still exist in the tracker; give them minimal data.
+        for n in self._non_compliant:
+            self._extra[_slug(n["name"])] = {"name": n["name"], "team": self._source.get("team"),
+                                            "status": "In progress", "source_updated_at": self._data["as_of"][:10]}
 
     def _check_up(self) -> None:
         if self._source.get("status") == "failed" and not self.force_up:
@@ -62,7 +67,7 @@ class MockConnector:
 
     def _get(self, key: str) -> dict[str, Any]:
         self._check_up()
-        p = self._projects.get(key)
+        p = self._projects.get(key) or self._extra.get(key)
         if p is None:
             raise SourceUnavailable(f"{self._source['name']}: no project {key}")
         return p
@@ -80,6 +85,9 @@ class MockConnector:
 
     async def get_project(self, key: str) -> SourceProject:
         p = self._get(key)
+        if key in self._extra:
+            return SourceProject(key=key, name=p["name"], url=self._url(key), team=p["team"], status=p["status"],
+                                 updated_at=datetime.fromisoformat(p["source_updated_at"]))
         return SourceProject(
             key=key, name=f"{key} {p['name']}", url=self._url(key),
             updated_at=datetime.fromisoformat(p["source_updated_at"]),

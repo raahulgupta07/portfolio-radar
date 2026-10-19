@@ -37,12 +37,12 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] Scheduler: 02:00 sync
 - [x] Tests: prefix rule, health rule, stale source
 
-## Phase 4 — App servers
+## Phase 4 — App servers ✅
 
-- [ ] `/portfolio/mcp`: `get_overview`, `list_projects`, `get_project`, `get_history`, `get_sync_status`
-- [ ] `/admin/mcp`: sources, prefixes, schedule, `run_sync`, sync log, non-compliant, `set_tool_status`
-- [ ] `/omni/mcp`: `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool`
-- [ ] End-to-end test with a real MCP client
+- [x] `/portfolio/mcp`: `get_overview`, `list_projects`, `get_project`, `get_history`, `get_roadmap`, `get_dependencies`, `get_risks`, `get_sync_status`
+- [x] `/admin/mcp`: sources, `test_source`, prefixes, settings (schedule, Radar rules, alerts), `run_sync`, sync log, non-compliant, tools, tool changes, audit
+- [x] `/omni/mcp`: `discover_server`, `discover_tools`, `get_tool_schema`, `invoke_tool` (only what the caller may use; same guard)
+- [x] Tests through the guard for every server (61 tests); HTTP end-to-end test from Phase 1
 
 ## Phase 5 — Web app and SSO
 

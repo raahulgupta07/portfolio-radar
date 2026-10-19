@@ -23,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapter.readers import SourceCallError, SourceReader
 from app.db import session_scope
-from app.health import ProjectInfo, MilestoneInfo, Thresholds, assess_all
+from app import appsettings
+from app.health import MilestoneInfo, ProjectInfo, assess_all
 from app.models.app import (
     Dependency,
     Milestone,
@@ -144,19 +145,26 @@ async def sync_source(reader: SourceReader, source: Source, prefixes: list[str],
                 rejected.append((ref["name"], m.reason or "No prefix"))
 
         fetched = []
+        failed_keys: set[str] = set()
         for ref, m in matched:
             key = ref["key"]
-            proj = await reader.call(sid, "get_project", {"key": key})
-            status = status_map.map(sid, proj["status"])
-            if status is None:
-                res.errors.append(f"{m.code}: status '{proj['status']}' has no mapping. Add it to config/status_map.json")
-                continue
-            fetched.append({
-                "match": m, "project": proj, "status": status,
-                "milestones": (await reader.call(sid, "get_milestones", {"key": key}))["milestones"],
-                "sprints": (await reader.call(sid, "get_sprints", {"key": key}))["sprints"],
-                "tasks": await reader.call(sid, "get_task_counts", {"key": key}),
-            })
+            try:
+                proj = await reader.call(sid, "get_project", {"key": key})
+                status = status_map.map(sid, proj["status"])
+                if status is None:
+                    res.errors.append(f"{m.code}: status '{proj['status']}' has no mapping. Add it to config/status_map.json")
+                    failed_keys.add(key)
+                    continue
+                fetched.append({
+                    "match": m, "project": proj, "status": status,
+                    "milestones": (await reader.call(sid, "get_milestones", {"key": key}))["milestones"],
+                    "sprints": (await reader.call(sid, "get_sprints", {"key": key}))["sprints"],
+                    "tasks": await reader.call(sid, "get_task_counts", {"key": key}),
+                })
+            except SourceCallError as e:
+                # One project failing must not stop the rest; its last good data stays.
+                res.errors.append(f"{m.code}: could not be read ({e})")
+                failed_keys.add(key)
         risks = (await reader.call(sid, "get_risks"))["risks"]
         links = (await reader.call(sid, "get_links"))["links"]
     except SourceCallError as e:
@@ -201,7 +209,7 @@ async def sync_source(reader: SourceReader, source: Source, prefixes: list[str],
             ).on_conflict_do_update(index_elements=["project_id"], set_={
                 "todo": t["todo"], "in_progress": t["in_progress"], "done": t["done"], "total": t["total"]}))
 
-        for key in sorted(set(existing) - seen):
+        for key in sorted(set(existing) - seen - failed_keys):
             res.errors.append(f"{existing[key].code}: no longer found in {source.name} (kept, last synced "
                               f"{existing[key].synced_at:%Y-%m-%d})" if existing[key].synced_at else
                               f"{existing[key].code}: no longer found in {source.name}")
@@ -257,6 +265,8 @@ async def recompute_health(session: AsyncSession, settings: Settings, today: dat
     projects = (await session.scalars(select(Project))).all()
     milestones = (await session.scalars(select(Milestone))).all()
     deps = (await session.scalars(select(Dependency))).all()
+    tasks = {t.project_id: t for t in (await session.scalars(select(TaskSummary))).all()}
+    admin = await appsettings.load(session, settings)
     code_of = {p.id: p.code for p in projects}
     ms_by: dict[int, list[MilestoneInfo]] = {}
     for m in milestones:
@@ -267,16 +277,23 @@ async def recompute_health(session: AsyncSession, settings: Settings, today: dat
 
     infos = [ProjectInfo(p.code, p.status, p.start_date, p.end_date, p.percent_done, p.owner,
                          tuple(ms_by.get(p.id, [])), tuple(waits.get(p.id, []))) for p in projects]
-    results = assess_all(infos, today, Thresholds.from_settings(settings))
+    results = assess_all(infos, today, admin.thresholds())
     out = {}
     for p in projects:
         r = results[p.code]
         p.health, p.health_reasons = r.health, r.reasons
         out[p.code] = r.health
+        t = tasks.get(p.id)
+        detail = {
+            "milestones": {m.name: m.due_date.isoformat() if m.due_date else None
+                           for m in milestones if m.project_id == p.id},
+            "tasks": {"done": t.done, "total": t.total} if t else None,
+            "owner": p.owner,
+        }
         await session.execute(pg_insert(Snapshot).values(
-            date=today, project_id=p.id, status=p.status, health=r.health, percent_done=p.percent_done,
+            date=today, project_id=p.id, status=p.status, health=r.health, percent_done=p.percent_done, detail=detail,
         ).on_conflict_do_update(index_elements=["date", "project_id"], set_={
-            "status": p.status, "health": r.health, "percent_done": p.percent_done}))
+            "status": p.status, "health": r.health, "percent_done": p.percent_done, "detail": detail}))
     return out
 
 

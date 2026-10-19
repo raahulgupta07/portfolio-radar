@@ -60,13 +60,19 @@ async def load_demo(settings: Settings, today: date) -> dict:
         latest = max(curve.values()) if curve else 0
         last_week = today - timedelta(days=7)
         projects = (await session.scalars(select(Project))).all()
+        current = {s.project_id: s for s in (await session.scalars(select(Snapshot).where(Snapshot.date == yesterday))).all()}
         for week, pct in curve.items():
             if week >= yesterday:
                 continue
+            scale = pct / latest if latest else 1
             for p in projects:
+                detail = dict(current[p.id].detail) if p.id in current else {}
+                if detail.get("tasks"):
+                    detail["tasks"] = {"done": round(detail["tasks"]["done"] * scale),
+                                       "total": detail["tasks"]["total"] - (2 if week < last_week else 0)}
                 await session.execute(pg_insert(Snapshot).values(
                     date=week, project_id=p.id, status=p.status, health=_past_health(p, week, last_week),
-                    percent_done=round((p.percent_done or 0) * (pct / latest if latest else 1)),
+                    percent_done=round((p.percent_done or 0) * scale), detail=detail,
                 ).on_conflict_do_nothing())
 
     real = await sync_all(GatewayReader(Gateway(registry, settings, {"connectors": {
@@ -75,9 +81,9 @@ async def load_demo(settings: Settings, today: date) -> dict:
 
 
 def _past_health(p: Project, week: date, last_week: date) -> str | None:
-    """POS03 slipped to At risk last week and Off track this week; Loyalty App followed."""
+    """POS03 went Off track last week; Loyalty App, which waits for it, became At risk this week."""
     if p.code == "CHL-DP-POS03":
-        return "at_risk" if week >= last_week else "on_track"
+        return "off_track" if week >= last_week else "on_track"
     if p.code == "CHL-DP-LOYAL02":
         return "on_track"
     return p.health

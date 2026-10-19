@@ -4,7 +4,7 @@ from typing import Any
 
 from app.connectors import SOURCES, build_connectors
 from app.mcp.registry import Registry
-from app.mcp.servers import system
+from app.mcp.servers import admin, omni, portfolio, system
 from app.mcp.servers.sources import make_source_server
 from app.settings import Settings
 
@@ -14,6 +14,9 @@ def build_registry(settings: Settings) -> Registry:
     registry.add(system.server)
     for source_id in SOURCES:
         registry.add(make_source_server(source_id))
+    registry.add(portfolio.server)
+    registry.add(admin.server)
+    registry.add(omni.server)
     return registry
 
 

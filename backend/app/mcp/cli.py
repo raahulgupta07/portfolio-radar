@@ -2,6 +2,7 @@
 
     python -m app.mcp.cli tools                       list every tool and its status
     python -m app.mcp.cli on  jira.list_projects --by "Name"
+    python -m app.mcp.cli on  "portfolio.*" --by "Name"      every tool on one server
     python -m app.mcp.cli off jira.list_projects --by "Name"
     python -m app.mcp.cli changes                     list changes waiting for review
     python -m app.mcp.cli approve 3 --by "Name"
@@ -57,8 +58,15 @@ async def main(argv: list[str] | None = None) -> None:
                       f"roles={','.join(r.roles) or 'any'}{in_code}")
         elif args.cmd in ("on", "off"):
             server, tool = _split(args.tool)
-            await registry.set_status(session, server, tool, args.cmd, args.by)
-            print(f"{args.tool} is now {args.cmd.upper()}")
+            if tool == "*":
+                if server not in registry.servers:
+                    raise SystemExit(f"No server {server}")
+                names = list(registry.servers[server].tools)
+            else:
+                names = [tool]
+            for name in names:
+                await registry.set_status(session, server, name, args.cmd, args.by)
+                print(f"{server}.{name} is now {args.cmd.upper()}")
         elif args.cmd == "changes":
             rows = (await session.scalars(select(McpToolChange).where(McpToolChange.status == "pending"))).all()
             if not rows:

@@ -48,7 +48,8 @@ class Gateway:
     def __init__(self, registry: Registry, settings: Settings, services: dict[str, Any] | None = None) -> None:
         self.registry = registry
         self.settings = settings
-        self.services = services or {}
+        self.services = dict(services or {})
+        self.services["gateway"] = self  # for tools that call other tools (omni, admin)
         self.limiter = RateLimiter(settings.rate_limit_per_minute)
 
     def _allowed(self, caller: Caller, spec: ToolSpec) -> tuple[bool, str]:
