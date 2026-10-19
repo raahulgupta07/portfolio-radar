@@ -1,0 +1,54 @@
+{
+  "projects": 500,
+  "snapshots_added": 165000,
+  "load_and_sync_s": 19.9,
+  "radar_check_s": 0.7,
+  "radar_findings": 354,
+  "tools": {
+    "get_overview": {
+      "p50_ms": 252.3,
+      "max_ms": 396.2,
+      "kb": 646.0
+    },
+    "list_projects": {
+      "p50_ms": 117.0,
+      "max_ms": 150.3,
+      "kb": 432.0
+    },
+    "list_projects(health=off_track)": {
+      "p50_ms": 66.2,
+      "max_ms": 67.5,
+      "kb": 91.3
+    },
+    "get_project": {
+      "p50_ms": 42.8,
+      "max_ms": 165.0,
+      "kb": 1.8
+    },
+    "get_history": {
+      "p50_ms": 15.6,
+      "max_ms": 15.7,
+      "kb": 13.4
+    },
+    "get_roadmap": {
+      "p50_ms": 180.9,
+      "max_ms": 187.4,
+      "kb": 529.5
+    },
+    "get_dependencies": {
+      "p50_ms": 46.4,
+      "max_ms": 49.8,
+      "kb": 58.2
+    },
+    "get_risks": {
+      "p50_ms": 72.0,
+      "max_ms": 75.0,
+      "kb": 160.9
+    },
+    "get_sync_status": {
+      "p50_ms": 31.5,
+      "max_ms": 34.2,
+      "kb": 0.7
+    }
+  }
+}

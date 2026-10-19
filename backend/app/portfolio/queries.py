@@ -55,6 +55,8 @@ class PortfolioData:
         self.risks: list[Risk] = []
         self.by_id: dict[int, Project] = {}
         self.last_week: dict[int, str | None] = {}
+        self._waits: dict[int, list[int]] = defaultdict(list)
+        self._blocks: dict[int, list[int]] = defaultdict(list)
 
     @classmethod
     async def load(cls, session: AsyncSession, today: date | None = None) -> PortfolioData:
@@ -68,6 +70,9 @@ class PortfolioData:
             s.sprints[sp.project_id].append(sp)
         s.tasks = {t.project_id: t for t in (await session.scalars(select(TaskSummary))).all()}
         s.deps = list((await session.scalars(select(Dependency))).all())
+        for d in s.deps:
+            s._waits[d.to_project_id].append(d.from_project_id)
+            s._blocks[d.from_project_id].append(d.to_project_id)
         s.risks = list((await session.scalars(select(Risk).order_by(Risk.id))).all())
         if today is not None:
             week_day = await session.scalar(select(func.max(Snapshot.date)).where(Snapshot.date <= today - timedelta(days=7)))
@@ -85,10 +90,10 @@ class PortfolioData:
         return open_ms[0] if open_ms else None
 
     def waits_for(self, p: Project) -> list[Project]:
-        return [self.by_id[d.from_project_id] for d in self.deps if d.to_project_id == p.id and d.from_project_id in self.by_id]
+        return [self.by_id[i] for i in self._waits.get(p.id, []) if i in self.by_id]
 
     def blocks(self, p: Project) -> list[Project]:
-        return [self.by_id[d.to_project_id] for d in self.deps if d.from_project_id == p.id and d.to_project_id in self.by_id]
+        return [self.by_id[i] for i in self._blocks.get(p.id, []) if i in self.by_id]
 
 
 def _source_info(src: Source | None) -> dict[str, Any]:
@@ -132,10 +137,18 @@ def matches(row: dict[str, Any], f: dict[str, Any]) -> bool:
     return not q or q in row["code"].lower() or q in row["name"].lower()
 
 
-async def _snapshots(session: AsyncSession, since: date) -> dict[date, dict[int, Snapshot]]:
-    out: dict[date, dict[int, Snapshot]] = defaultdict(dict)
-    for snap in (await session.scalars(select(Snapshot).where(Snapshot.date >= since))).all():
-        out[snap.date][snap.project_id] = snap
+async def _snapshots(session: AsyncSession, since: date, project_id: int | None = None) -> dict[date, dict[int, Any]]:
+    """Snapshots by day and project. For all projects only the light columns are read (500 projects × 6 weeks
+    is 21,000 rows); for one project, the whole row (its detail feeds "what changed")."""
+    out: dict[date, dict[int, Any]] = defaultdict(dict)
+    if project_id is None:
+        q = select(Snapshot.date, Snapshot.project_id, Snapshot.health, Snapshot.percent_done).where(Snapshot.date >= since)
+        for row in (await session.execute(q)).all():
+            out[row.date][row.project_id] = row
+    else:
+        q = select(Snapshot).where(Snapshot.date >= since, Snapshot.project_id == project_id)
+        for snap in (await session.scalars(q)).all():
+            out[snap.date][snap.project_id] = snap
     return out
 
 
@@ -164,6 +177,13 @@ async def latest_radar(session: AsyncSession) -> dict[str, Any]:
                        "project_id": f.project_id, "evidence": f.evidence_json} for f in findings]}
 
 
+NOTE_ITEMS = 3  # projects named in a tile note; with 500 projects the rest is "and N more"
+
+
+def _first(text: list[str], total: int) -> str:
+    return text[0] + (f"; and {total - NOTE_ITEMS} more" if total > NOTE_ITEMS else "")
+
+
 async def overview(session: AsyncSession, today: date) -> dict[str, Any]:
     s = await PortfolioData.load(session, today)
     rows = [project_row(s, p) for p in s.projects]
@@ -187,16 +207,19 @@ async def overview(session: AsyncSession, today: date) -> dict[str, Any]:
                         since = d
                     else:
                         break
-                parts.append(f"{short_code(p)} · off track since {since:%d %b}")
-            note = "; ".join(parts)
+                parts.append((since, f"{short_code(p)} · off track since {since:%d %b}"))
+            parts.sort(key=lambda x: x[0])  # longest off track first
+            note = _first(["; ".join(x[1] for x in parts[:NOTE_ITEMS])], len(parts))
         elif h == DONE and now_codes:
-            note = ", ".join(f"{p.name}" + (f", ends {p.end_date:%d %b}" if p.end_date else "") for p in now_codes)
+            done = [f"{p.name}" + (f", ends {p.end_date:%d %b}" if p.end_date else "") for p in now_codes]
+            note = _first([", ".join(done[:NOTE_ITEMS])], len(done))
         elif change is None:
             note = "No history yet"
         elif change == 0:
             note = "No change from last week"
         else:
-            note = f"{change:+d} since last week" + (f" ({', '.join(new)})" if new and change > 0 else "")
+            shown = ", ".join(new[:NOTE_ITEMS]) + (f" and {len(new) - NOTE_ITEMS} more" if len(new) > NOTE_ITEMS else "")
+            note = f"{change:+d} since last week" + (f" ({shown})" if new and change > 0 else "")
         tiles.append({"health": h, "label": LABELS[h], "count": len(now_codes), "change": change, "note": note})
 
     sources = []
@@ -278,7 +301,7 @@ async def project_detail(session: AsyncSession, code: str, today: date) -> dict[
     nm = s.next_milestone(p)
     sprint = next((sp for sp in reversed(s.sprints[p.id]) if sp.state == "active"), None)
     t = s.tasks.get(p.id)
-    snaps = await _snapshots(session, today - timedelta(days=42))
+    snaps = await _snapshots(session, today - timedelta(days=42), p.id)
     trend = []
     for w in range(5, -1, -1):
         d = _on_or_before(snaps, today - timedelta(days=7 * w))

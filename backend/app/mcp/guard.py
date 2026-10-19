@@ -51,6 +51,7 @@ class Gateway:
         self.services = dict(services or {})
         self.services["gateway"] = self  # for tools that call other tools (omni, admin)
         self.limiter = RateLimiter(settings.rate_limit_per_minute)
+        self.service_rate_limit = settings.service_rate_limit_per_minute
 
     def _allowed(self, caller: Caller, spec: ToolSpec) -> tuple[bool, str]:
         if not caller.may_use_server(spec.server):
@@ -74,6 +75,13 @@ class Gateway:
                     out.append(spec)
         return out
 
+    def _rate_limit(self, caller: Caller) -> int | None:
+        """The caller's own limit (agents set up in Admin). Services such as the nightly sync read every
+        project, about four calls each, so they get a higher default than people and agents."""
+        if caller.rate_limit:
+            return caller.rate_limit
+        return self.service_rate_limit if caller.kind == "service" else None
+
     async def call(self, caller: Caller, server: str, tool: str, arguments: dict[str, Any] | None) -> CallResult:
         started = time.monotonic()
         arguments = dict(arguments or {})
@@ -82,7 +90,7 @@ class Gateway:
         try:
             if spec is None:
                 raise GuardDenied(f"Unknown tool {server}.{tool}")
-            if not self.limiter.allow(caller.id, caller.rate_limit):
+            if not self.limiter.allow(caller.id, self._rate_limit(caller)):
                 raise GuardDenied("Too many requests. Try again in a minute")
             async with session_scope() as session:
                 usable, why = await self.registry.is_usable(session, spec)

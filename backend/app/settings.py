@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     identity_refresh_seconds: float = 30.0
 
     rate_limit_per_minute: int = 120
+    # Services (nightly sync, Radar job, notifier): the sync makes about 4 calls per project.
+    service_rate_limit_per_minute: int = 6000
     # Seconds a tool's on/off status is cached before re-reading the registry.
     registry_cache_seconds: float = 5.0
     # Longest argument summary kept in the audit log.
