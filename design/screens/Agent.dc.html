@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7F0EA}
+a{color:#111111;text-decoration:none}a:hover{color:#000000;text-decoration:underline}
+.rail a,.rail button{width:44px;height:44px;border-radius:999px;border:0;display:inline-flex;align-items:center;justify-content:center;color:#111111;position:relative;cursor:pointer;text-decoration:none}
+.rail a:hover,.rail button:hover{filter:brightness(.96);text-decoration:none}
+.ib{width:44px;height:44px;border-radius:999px;border:1.5px solid #DDE5DF;background:#FFFFFF;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#111111;position:relative;text-decoration:none;flex-shrink:0;box-sizing:border-box}
+.ib:hover{background:#F1F5F2;text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:0 16px;min-height:40px;font:600 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;border:0;background:#FFFFFF;color:#111111;text-decoration:none}
+.btn:hover{background:#F1F5F2;text-decoration:none}
+.btn-dark{background:#111111;color:#FFFFFF}.btn-dark:hover{background:#2A2A2A;color:#FFFFFF}
+.btn-ghost{background:#2A2A2A;color:#FFFFFF}.btn-ghost:hover{background:#3A3A3A}
+.chipq{border:1.5px solid #DDE5DF;background:#FFFFFF;border-radius:999px;padding:0 14px;min-height:38px;font:600 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;color:#111111}
+.chipq:hover{border-color:#111111}
+.wait{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:0 14px;min-height:38px;font:600 13px 'Plus Jakarta Sans',sans-serif;color:#111111;text-decoration:none}
+.wait:hover{text-decoration:none;filter:brightness(.97)}
+input:focus,button:focus-visible,a:focus-visible{outline:2px solid #111111;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; font-family: 'Plus Jakarta Sans', sans-serif; color: #111111; background: #E7F0EA; padding: 14px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch">
+
+<nav class="rail" aria-label="Main" style="flex: 0 0 auto; align-self: center; width: 64px; background: #FFFFFF; border-radius: 36px; padding: 12px 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 8px 24px rgba(17,17,17,.06)">
+<a href="Agent.dc.html" aria-label="Radar, your portfolio agent" title="Radar, your portfolio agent" aria-current="page" style="background: #E2F2E7; color: #FFFFFF; box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #7FD69A"><dc-import name="RadarFace" mood="{{mood}}" size="38" hint-size="38px,38px"></dc-import><span style="position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 99px; background: #D64545; color: #FFFFFF; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF">4</span></a>
+<span style="width: 28px; height: 1px; background: #E3EAE5"></span>
+<a href="Main.dc.html" aria-label="Portfolio overview" title="Portfolio overview" style="background: #E2F2E7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg></a>
+<a href="Project.dc.html" aria-label="Projects" title="Projects" style="background: #FBE6A9"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V4h6v3M3 13h18"></path></svg></a>
+<a href="Roadmap.dc.html" aria-label="Roadmap" title="Roadmap" style="background: #CFE3FB"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M8 12h12M4 18h8"></path></svg></a>
+<a href="Risks.dc.html" aria-label="Risks and strategy" title="Risks and strategy" style="background: #F8CDD0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"></path><path d="M12 8v5M12 16v.5" stroke-linecap="round"></path></svg></a>
+<a href="Admin.dc.html" aria-label="Admin and agent rules" title="Admin and agent rules" style="background: #F1F5F2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg></a>
+<span style="width: 28px; height: 1px; background: #E3EAE5"></span>
+<button type="button" aria-label="Search everything" title="Search" style="background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+<a href="Agent.dc.html" aria-label="Alerts, 4 new" title="Alerts" style="background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 99px; background: #D64545"></span></a>
+<div title="Average progress 50%" style="display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="34" height="34" viewBox="0 0 36 36" role="img" aria-label="Average progress 50 percent"><circle cx="18" cy="18" r="14" fill="none" stroke="#E3EAE5" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-dasharray="44 88" transform="rotate(-90 18 18)"></circle></svg><span style="font-size: 11px; font-weight: 800">50%</span></div>
+<span title="Rahul Gupta · City SSO" style="width: 40px; height: 40px; border-radius: 999px; background: #111111; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px">RG</span>
+</nav>
+
+<main style="flex: 999 1 600px; min-width: 0; background: #FFFFFF; border-radius: 32px; display: flex; flex-direction: column; height: calc(100vh - 28px); min-height: 760px; overflow: hidden">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 18px 24px; border-bottom: 1px solid #EEF2EF">
+<span style="position: relative; width: 60px; height: 60px; display: inline-flex; flex-shrink: 0">
+<dc-import name="RadarFace" mood="{{mood}}" size="60" hint-size="60px,60px"></dc-import>
+<span style="position: absolute; right: 1px; bottom: 1px; width: 14px; height: 14px; border-radius: 99px; background: {{statusDot}}; border: 3px solid #FFFFFF"></span>
+</span>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1">Radar</h1>
+<span style="font-size: 13px; color: #3E4640">{{statusText}}</span>
+</div>
+<div style="margin-left: auto; display: flex; gap: 8px">
+<button type="button" class="ib" aria-label="{{callLabel}}" onClick="{{toggleCall}}" style="{{callStyle}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></button>
+<button type="button" class="ib" aria-label="Share conversation"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path></svg></button>
+<button type="button" class="ib" aria-label="More options"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+</div>
+</header>
+
+<sc-if value="{{onCall}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 12px; background: #111111; color: #FFFFFF; padding: 10px 24px">
+<dc-import name="RadarFace" mood="{{mood}}" size="38" hint-size="38px,38px"></dc-import>
+<span style="font-size: 14px; font-weight: 600">On a call with Radar. A summary will appear here when you hang up.</span>
+<button type="button" class="btn" onClick="{{toggleCall}}" style="margin-left: auto; background: #F27E7E; color: #111111">Hang up</button>
+</div>
+</sc-if>
+
+<sc-if value="{{hasWaiting}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 24px; background: #FAFCFB; border-bottom: 1px solid #EEF2EF">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: .03em; color: #3E4640; margin-right: 4px">WAITING FOR YOU</span>
+<sc-if value="{{askOpen}}" hint-placeholder-val="{{true}}"><a href="#ask" class="wait" style="background: #FBE6A9">Answer: nudge the POS03 owner?</a></sc-if>
+<sc-if value="{{nudgePending}}" hint-placeholder-val="{{false}}"><a href="#nudge" class="wait" style="background: #F8CDD0">Approve: nudge to POS03 owner</a></sc-if>
+<sc-if value="{{digestPending}}" hint-placeholder-val="{{true}}"><a href="#digest" class="wait" style="background: #CFE3FB">Approve: weekly digest</a></sc-if>
+</div>
+</sc-if>
+
+<div style="flex: 1; overflow-y: auto; padding: 24px">
+<div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px">
+
+<div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 8px 0 18px; text-align: center">
+<dc-import name="RadarFace" mood="happy" size="84" hint-size="84px,84px"></dc-import>
+<span style="font-size: 18px; font-weight: 800">This is your conversation with Radar</span>
+<span style="font-size: 13px; color: #3E4640; max-width: 460px; line-height: 1.5">Radar reads JIRA, OpenProject and Multica every night, checks every project, and tells you what needs you. It never changes the trackers and asks before it sends anything.</span>
+</div>
+
+<sc-for list="{{messages}}" as="m" hint-placeholder-count="8">
+
+<sc-if value="{{m.isDivider}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; justify-content: center; padding: 6px 0"><span style="background: #F1F5F2; border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 700; color: #3E4640">{{m.text}}</span></div>
+</sc-if>
+
+<sc-if value="{{m.isPill}}" hint-placeholder-val="{{false}}">
+<div style="margin-left: 46px; display: flex"><span style="display: inline-flex; align-items: center; gap: 8px; background: #F4F7F5; border-radius: 999px; padding: 8px 14px; font-size: 12px; color: #3E4640"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{m.text}}</span></div>
+</sc-if>
+
+<sc-if value="{{m.isMe}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; justify-content: flex-end"><div style="max-width: 70%; background: #111111; color: #FFFFFF; border-radius: 22px 22px 6px 22px; padding: 12px 18px; font-size: 14px; line-height: 1.5; font-weight: 600">{{m.text}}</div></div>
+</sc-if>
+
+<sc-if value="{{m.isPulse}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 12px; align-items: flex-end">
+<span style="width: 38px; height: 38px; flex-shrink: 0; display: inline-flex"><dc-import name="RadarFace" mood="{{m.mood}}" size="38" hint-size="38px,38px"></dc-import></span>
+<div style="max-width: 84%; display: flex; flex-direction: column; gap: 6px">
+<div style="background: #F1F5F2; border-radius: 22px 22px 22px 6px; padding: 14px 18px; font-size: 14px; line-height: 1.55; white-space: pre-line">{{m.text}}</div>
+<sc-if value="{{m.hasEvidence}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: #5B635D; padding-left: 8px">Evidence: {{m.evidence}}</span></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{m.isAsk}}" hint-placeholder-val="{{false}}">
+<div id="ask" style="display: flex; gap: 12px; align-items: flex-start; scroll-margin-top: 20px">
+<span style="width: 38px; height: 38px; flex-shrink: 0; display: inline-flex"><dc-import name="RadarFace" mood="{{m.mood}}" size="38" hint-size="38px,38px"></dc-import></span>
+<div style="max-width: 84%; display: flex; flex-direction: column; gap: 10px; background: #FBE6A9; border-radius: 22px; padding: 14px 18px">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: .03em">RADAR ASKS</span>
+<span style="font-size: 14px; line-height: 1.55">{{m.text}}</span>
+<sc-if value="{{m.open}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button type="button" class="btn btn-dark" onClick="{{m.yes}}">Yes, draft it</button>
+<button type="button" class="btn" onClick="{{m.no}}">Not now</button>
+</div>
+</sc-if>
+<sc-if value="{{m.answered}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 700">You answered: {{m.answer}}</span></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{m.isHealth}}" hint-placeholder-val="{{false}}">
+<div style="margin-left: 46px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-width: 600px">
+<a href="Main.dc.html" style="background: #E2F2E7; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; text-decoration: none"><span style="font-size: 26px; font-weight: 700">6</span><span style="font-size: 12px; font-weight: 600">On track</span></a>
+<a href="Main.dc.html" style="background: #FBE6A9; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; text-decoration: none"><span style="font-size: 26px; font-weight: 700">2</span><span style="font-size: 12px; font-weight: 600">At risk</span></a>
+<a href="Main.dc.html" style="background: #F8CDD0; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; text-decoration: none"><span style="font-size: 26px; font-weight: 700">1</span><span style="font-size: 12px; font-weight: 600">Off track</span></a>
+<a href="Main.dc.html" style="background: #CFE3FB; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; text-decoration: none"><span style="font-size: 26px; font-weight: 700">1</span><span style="font-size: 12px; font-weight: 600">Done</span></a>
+</div>
+</sc-if>
+
+<sc-if value="{{m.isFindings}}" hint-placeholder-val="{{false}}">
+<div style="margin-left: 46px; display: flex; flex-direction: column; gap: 8px; max-width: 640px">
+<a href="Project.dc.html" style="display: flex; align-items: center; gap: 14px; background: #F8CDD0; border-radius: 22px; padding: 12px 16px; text-decoration: none"><span style="background: #111111; color: #FFFFFF; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700">Off track</span><span style="flex: 1; display: flex; flex-direction: column"><strong style="font-size: 14px">POS03 · vendor contract 4 days overdue</strong><span style="font-size: 12px">On hold since 12 Oct. Blocks the Loyalty App beta.</span></span></a>
+<a href="Roadmap.dc.html" style="display: flex; align-items: center; gap: 14px; background: #FBE6A9; border-radius: 22px; padding: 12px 16px; text-decoration: none"><span style="background: #111111; color: #FFFFFF; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700">At risk</span><span style="flex: 1; display: flex; flex-direction: column"><strong style="font-size: 14px">LOYAL02 · beta in 17 days, 41% done</strong><span style="font-size: 12px">Behind the time used, and waits for POS03.</span></span></a>
+<a href="Admin.dc.html" style="display: flex; align-items: center; gap: 14px; background: #F4F7F5; border-radius: 22px; padding: 12px 16px; text-decoration: none"><span style="background: #111111; color: #FFFFFF; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700">Sync</span><span style="flex: 1; display: flex; flex-direction: column"><strong style="font-size: 14px">Multica sync failed · token expired</strong><span style="font-size: 12px">3 projects show data from 18 Oct.</span></span></a>
+<a href="Project.dc.html" style="display: flex; align-items: center; gap: 14px; background: #F4F7F5; border-radius: 22px; padding: 12px 16px; text-decoration: none"><span style="background: #111111; color: #FFFFFF; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700">Data</span><span style="flex: 1; display: flex; flex-direction: column"><strong style="font-size: 14px">AGT04 · no owner, no milestone dates</strong><span style="font-size: 12px">Seen for 3 days in Multica.</span></span></a>
+</div>
+</sc-if>
+
+<sc-if value="{{m.isApproval}}" hint-placeholder-val="{{false}}">
+<div id="{{m.anchor}}" style="margin-left: 46px; max-width: 640px; background: #161616; color: #FFFFFF; border-radius: 26px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 20px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">{{m.title}}</strong><span style="font-size: 12px; color: #C9CFCB">{{m.to}}</span></span>
+<span style="border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; {{m.badgeStyle}}">{{m.badge}}</span>
+</div>
+<div style="background: #2A2A2A; border-radius: 18px; padding: 14px 16px; font-size: 14px; line-height: 1.55; white-space: pre-line">{{m.text}}</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-if value="{{m.pending}}" hint-placeholder-val="{{true}}">
+<button type="button" class="btn" onClick="{{m.approve}}">{{m.approveLabel}}</button>
+<button type="button" class="btn btn-ghost">Edit</button>
+<button type="button" class="btn btn-ghost">Reject</button>
+</sc-if>
+<sc-if value="{{m.done}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 13px; color: #D9DEDA; align-self: center">{{m.doneText}}</span>
+<button type="button" class="btn btn-ghost" onClick="{{m.undo}}">Undo</button>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{m.isDep}}" hint-placeholder-val="{{false}}">
+<div style="margin-left: 46px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #F4F7F5; border-radius: 22px; padding: 12px 16px; max-width: 640px">
+<span style="background: #F8CDD0; border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">POS03</strong><span style="font-size: 12px">Vendor contract · 15 Oct · late</span></span>
+<svg width="28" height="16" viewBox="0 0 28 16" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8h22M18 2l6 6-6 6"></path></svg>
+<span style="background: #FBE6A9; border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">LOYAL02</strong><span style="font-size: 12px">Beta release · 05 Nov · 41%</span></span>
+<a href="Roadmap.dc.html" class="btn" style="margin-left: auto">Open roadmap</a>
+</div>
+</sc-if>
+
+</sc-for>
+</div>
+</div>
+
+<div style="padding: 10px 24px 18px; border-top: 1px solid #EEF2EF">
+<div style="max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{suggestions}}" as="s" hint-placeholder-count="4">
+<button type="button" class="chipq" onClick="{{s.ask}}">{{s.label}}</button>
+</sc-for>
+</div>
+<form onSubmit="{{onSend}}" style="display: flex; align-items: center; gap: 6px; background: #F1F5F2; border-radius: 999px; padding: 6px 6px 6px 8px">
+<button type="button" class="ib" aria-label="Attach a file" style="width: 40px; height: 40px; border: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<label style="flex: 1; display: flex">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message Radar</span>
+<input type="text" placeholder="Message Radar. Ask about any project, team or date…" value="{{draft}}" onInput="{{onDraft}}" style="flex: 1; border: 0; outline: none; background: transparent; font: 500 14px 'Plus Jakarta Sans', sans-serif; min-height: 44px; color: #111111">
+</label>
+<button type="button" class="ib" aria-label="Voice message" style="width: 40px; height: 40px; border: 0; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></button>
+<button type="submit" style="border: 0; border-radius: 999px; padding: 0 24px; min-height: 44px; font: 700 14px 'Plus Jakarta Sans', sans-serif; cursor: pointer; {{sendStyle}}">Send</button>
+</form>
+</div>
+</div>
+</main>
+
+<aside aria-label="About Radar" style="flex: 1 1 320px; max-width: 360px; min-width: 280px; display: flex; flex-direction: column; gap: 14px; height: calc(100vh - 28px); min-height: 760px; overflow-y: auto">
+
+<section style="background: #111111; color: #FFFFFF; border-radius: 32px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 14px">
+<span style="width: 64px; height: 64px; border-radius: 20px; background: #1F2A22; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0"><dc-import name="RadarFace" mood="{{mood}}" size="56" hint-size="56px,56px"></dc-import></span>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 24px; font-weight: 800; letter-spacing: -.03em">Radar</span>
+<span style="font-size: 13px; color: #C9CFCB">Portfolio agent · CityGPT</span>
+</div>
+</div>
+<span style="font-size: 14px; line-height: 1.55; color: #E3E8E4">Watches all 10 projects every day and tells you only what needs you.</span>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="background: #1F1F1F; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column"><span style="font-size: 18px; font-weight: 800">10</span><span style="font-size: 11px; color: #C9CFCB">projects</span></div>
+<div style="background: #1F1F1F; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column"><span style="font-size: 18px; font-weight: 800">3</span><span style="font-size: 11px; color: #C9CFCB">sources</span></div>
+<div style="background: #1F1F1F; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column"><span style="font-size: 18px; font-weight: 800">54%</span><span style="font-size: 11px; color: #C9CFCB">credits used</span></div>
+</div>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #C9CFCB"><span style="width: 8px; height: 8px; border-radius: 99px; background: #7FD69A"></span>Free · last job 02:10 · next after tomorrow's sync</span>
+</section>
+
+<section aria-labelledby="ab-h" style="background: #FFFFFF; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="ab-h" style="margin: 0; font-size: 16px; font-weight: 800">What Radar does</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<li style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 99px; background: #2E8B57"></span><span style="flex: 1; font-weight: 600">Checks project health</span><span style="font-size: 12px; color: #5B635D">02:10 today</span></li>
+<li style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 99px; background: #2E8B57"></span><span style="flex: 1; font-weight: 600">Finds missing data</span><span style="font-size: 12px; color: #5B635D">02:10 today</span></li>
+<li style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 99px; background: #C23B3B"></span><span style="flex: 1; font-weight: 600">Watches the sync</span><span style="font-size: 12px; color: #5B635D">1 alert</span></li>
+<li style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 99px; background: #B98300"></span><span style="flex: 1; font-weight: 600">Writes the weekly digest</span><span style="font-size: 12px; color: #5B635D">Draft ready</span></li>
+<li style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 99px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #111111"></span><span style="flex: 1; font-weight: 600">Answers your questions</span><span style="font-size: 12px; color: #5B635D">Any time</span></li>
+</ul>
+</section>
+
+<section aria-labelledby="rt-h" style="background: #FFFFFF; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 id="rt-h" style="margin: 0; font-size: 16px; font-weight: 800">Routines</h2><a href="Admin.dc.html" style="font-size: 12px; font-weight: 700">Edit</a></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<div style="background: #E2F2E7; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 13px">Daily · 02:10</strong><span style="font-size: 12px">Health check</span></div>
+<div style="background: #CFE3FB; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 13px">Mon · 09:00</strong><span style="font-size: 12px">Stale work check</span></div>
+<div style="background: #FBE6A9; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 13px">Fri · 16:00</strong><span style="font-size: 12px">SteerCo digest</span></div>
+<div style="background: #F8CDD0; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 13px">On event</strong><span style="font-size: 12px">Sync fails, red</span></div>
+</div>
+</section>
+
+<section aria-labelledby="ru-h" style="background: #FFFFFF; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<h2 id="ru-h" style="margin: 0; font-size: 16px; font-weight: 800">Radar's rules</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<li style="display: flex; gap: 10px; align-items: baseline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Reads only. Never changes JIRA, OpenProject or Multica.</li>
+<li style="display: flex; gap: 10px; align-items: baseline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Asks you before it sends any message.</li>
+<li style="display: flex; gap: 10px; align-items: baseline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>Shows the evidence behind every answer.</li>
+</ul>
+</section>
+
+<section aria-labelledby="mm-h" style="background: #FFFFFF; border-radius: 28px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 id="mm-h" style="margin: 0; font-size: 16px; font-weight: 800">Radar remembers</h2><button type="button" class="btn" style="min-height: 32px; padding: 0 12px; background: #F1F5F2; font-size: 12px">Edit</button></div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #2A302C">
+<li style="background: #F4F7F5; border-radius: 14px; padding: 9px 12px">POS03 has been red since 12 Oct</li>
+<li style="background: #F4F7F5; border-radius: 14px; padding: 9px 12px">Rahul approves all digests and nudges</li>
+<li style="background: #F4F7F5; border-radius: 14px; padding: 9px 12px">The digest puts decisions first</li>
+</ul>
+</section>
+
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { draft: '', digest: 'pending', nudge: 'none', ask: 'open', onCall: false, extra: [] };
+  }
+  renderVals() {
+    const S = this.state;
+    const digestCard = {
+      kind: 'approval', key: 'digest', anchor: 'digest', title: 'Weekly digest · week of 19 Oct', to: 'To: Steering Committee, CTO · Fri 23 Oct, 16:00',
+      text: '10 projects: 6 on track, 2 at risk, 1 off track, 1 done. Avg progress 50%.\nDecision needed: POS03 vendor contract is 4 days late and blocks the Loyalty App beta.\nWatch: LOYAL02 beta on 05 Nov at 41%. Multica sync failing since 19 Oct.\nGood news: Data Warehouse Migration at 83% (+12 pts).',
+      approveLabel: 'Approve and schedule', doneText: 'Approved. Sends Fri 23 Oct, 16:00.'
+    };
+    const nudgeCard = {
+      kind: 'approval', key: 'nudge', anchor: 'nudge', title: 'Nudge to POS03 owner', to: 'Via Microsoft Teams',
+      text: '"The vendor contract milestone is 4 days overdue in JIRA. Can you add a new date or a note on the blocker?"',
+      approveLabel: 'Approve and send', doneText: 'Approved. Sent on Teams.'
+    };
+    let list = [
+      { kind: 'divider', text: 'Fri 16 Oct · 16:00' },
+      { kind: 'pulse', mood: 'happy', text: 'Weekly digest sent to the Steering Committee and the CTO, after your approval.' },
+      { kind: 'divider', text: 'Yesterday · 10:05' },
+      { kind: 'pulse', mood: 'alert', text: 'Heads-up: the Multica access token expires tomorrow. If it is not renewed, AI Team projects will stop updating.' },
+      { kind: 'me', text: 'Ok, I will ask IT to renew it.' },
+      { kind: 'divider', text: 'Today · 02:10' },
+      { kind: 'pulse', mood: 'alert', text: 'Good morning Rahul. I read all three trackers after the 02:00 sync and checked 10 projects. 4 things need you.' },
+      { kind: 'health' },
+      { kind: 'findings' },
+      { kind: 'pulse', mood: 'offline', text: 'The Multica token was not renewed, so today’s Multica sync failed. I kept the data from 18 Oct and marked those 3 projects as stale.', evidence: 'Sync log · 19 Oct, 02:00' },
+      { kind: 'ask', text: 'POS03 has been red for a week and the owner has not updated JIRA since 12 Oct. Should I draft a nudge to the owner?' }
+    ];
+    if (S.ask === 'yes') list = list.concat([{ kind: 'pulse', text: 'Here is the draft. It goes out only when you approve it.' }, nudgeCard]);
+    if (S.ask === 'no') list = list.concat([{ kind: 'pulse', text: 'Ok. I will ask again on Wednesday if POS03 is still red.' }]);
+    list = list.concat([
+      { kind: 'pulse', text: 'I also drafted this week’s digest for the Steering Committee. The decision needed is at the top.' },
+      digestCard,
+      { kind: 'divider', text: 'Today · 09:30' },
+      { kind: 'me', text: 'Why is Loyalty App at risk?' },
+      { kind: 'pulse', mood: 'thinking', text: 'Two reasons. The beta is due 05 Nov and only 41% is done, which is behind the time already used. It also waits for POS03, whose vendor contract is 4 days late.', evidence: 'JIRA · LOYAL02 and POS03 · synced 19 Oct, 02:00' },
+      { kind: 'dep' },
+      { kind: 'pill', text: 'Call with Radar · 2:14 · agreed to raise POS03 at Friday’s SteerCo' }
+    ]);
+    if (S.ask === 'open') list = list.concat([{ kind: 'pill', text: 'Still waiting for your answer: should I draft a nudge to the POS03 owner?' }]);
+    list = list.concat(S.extra);
+    const pend = (k) => S[k] === 'pending';
+    const messages = list.map((m) => ({
+      ...m,
+      isDivider: m.kind === 'divider',
+      isPill: m.kind === 'pill',
+      isMe: m.kind === 'me',
+      isPulse: m.kind === 'pulse',
+      mood: m.kind === 'ask' ? (S.ask === 'open' ? 'asking' : 'happy') : (m.mood || 'ready'),
+      isAsk: m.kind === 'ask',
+      isHealth: m.kind === 'health',
+      isFindings: m.kind === 'findings',
+      isApproval: m.kind === 'approval',
+      isDep: m.kind === 'dep',
+      hasEvidence: !!m.evidence,
+      evidence: m.evidence || '',
+      anchor: m.anchor || '',
+      open: m.kind === 'ask' && S.ask === 'open',
+      answered: m.kind === 'ask' && S.ask !== 'open',
+      answer: S.ask === 'yes' ? 'Yes, draft it' : 'Not now',
+      yes: () => this.setState({ ask: 'yes', nudge: 'pending' }),
+      no: () => this.setState({ ask: 'no' }),
+      pending: m.key ? pend(m.key) : false,
+      done: m.key ? !pend(m.key) : false,
+      badge: m.key ? (pend(m.key) ? 'Waiting for approval' : 'Approved') : '',
+      badgeStyle: m.key && !pend(m.key) ? 'background: #7FD69A; color: #111111' : 'background: #FFFFFF; color: #111111',
+      approve: m.key ? () => this.setState({ [m.key]: 'approved' }) : null,
+      undo: m.key ? () => this.setState({ [m.key]: 'pending' }) : null
+    }));
+    const projects = [
+      ['pos03', 'POS Integration (CHL-DP-POS03) is off track at 30%. The vendor contract milestone was due 15 Oct and is 4 days late. It blocks the Loyalty App beta.'],
+      ['loyal02', 'Loyalty App v3 (CHL-DP-LOYAL02) is at risk at 41%. Beta is due 05 Nov and waits for POS03.'],
+      ['portal01', 'Customer Portal Revamp (CHL-DP-PORTAL01) is on track at 64%. UAT sign-off is on 28 Oct.'],
+      ['gpt01', 'CityGPT Agents (CHL-IT-DAAI-GPT01) is on track at 72%. Wave 2 rolls out 31 Oct. Data is from 18 Oct.'],
+      ['dwh04', 'Data Warehouse Migration (CHL-IT-DWH04) is on track at 83%, up 12 points this week.'],
+      ['agt04', 'Agent Ops Console (CHL-IT-DAAI-AGT04) is at risk: no owner and no milestone dates yet.']
+    ];
+    const answers = {
+      'What changed this week?': 'LOYAL02 moved to At risk. DWH04 went from 71% to 83%. FC03 end date moved from 01 Dec to 15 Dec. POS03 went On hold on 12 Oct.',
+      'Overdue milestones': 'One milestone is overdue: Vendor contract signed (CHL-DP-POS03), due 15 Oct, now 4 days late.',
+      'Which team has most risk?': 'Digital Teams: 1 off track (POS03) and 1 at risk (LOYAL02) out of 4 projects.',
+      'Summarise for SteerCo': 'This week: 6 on track, 2 at risk, 1 off track, 1 done. One decision is needed on the POS vendor contract. The digest draft is waiting for your approval.'
+    };
+    const reply = (q) => {
+      if (answers[q]) return answers[q];
+      const t = q.toLowerCase();
+      const p = projects.find((x) => t.includes(x[0]));
+      if (p) return p[1];
+      if (t.includes('change')) return answers['What changed this week?'];
+      if (t.includes('overdue') || t.includes('late')) return answers['Overdue milestones'];
+      return 'I will check the synced data and answer with the evidence. In this prototype, try a project code like POS03 or LOYAL02, or one of the suggestions.';
+    };
+    const ask = (q) => {
+      this.setState({ extra: this.state.extra.concat([{ kind: 'me', text: q }, { kind: 'pulse', text: reply(q), evidence: 'Portfolio database · synced 19 Oct, 02:00' }]), draft: '' });
+    };
+    const suggestions = Object.keys(answers).map((k) => ({ label: k, ask: () => ask(k) }));
+    const busy = S.onCall;
+    const askOpen = S.ask === 'open';
+    const nudgePending = S.nudge === 'pending';
+    const digestPending = S.digest === 'pending';
+    return {
+      messages,
+      suggestions,
+      draft: S.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onSend: (e) => { e.preventDefault(); const q = this.state.draft.trim(); if (q) ask(q); },
+      sendStyle: S.draft.trim() ? 'background: #111111; color: #FFFFFF' : 'background: #9AA59D; color: #FFFFFF',
+      askOpen,
+      nudgePending,
+      digestPending,
+      hasWaiting: askOpen || nudgePending || digestPending,
+      onCall: busy,
+      toggleCall: () => this.setState({ onCall: !S.onCall }),
+      callLabel: busy ? 'Hang up' : 'Call Radar',
+      callStyle: busy ? 'background: #111111; color: #FFFFFF; border-color: #111111' : '',
+      mood: busy ? 'listening' : ((askOpen || nudgePending || digestPending) ? 'asking' : 'happy'),
+      statusDot: busy ? '#2E8B57' : ((askOpen || nudgePending || digestPending) ? '#B98300' : '#2E8B57'),
+      statusText: busy ? 'Listening…' : ((askOpen || nudgePending || digestPending) ? 'Waiting for you · read-only' : 'All done · digest scheduled · read-only')
+    };
+  }
+}
+</script>
+</body>
+</html>

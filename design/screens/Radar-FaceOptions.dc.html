@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radar face options</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.pick{border:0;border-radius:999px;padding:0 18px;min-height:44px;font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+button:focus-visible{outline:2px solid #111111;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1220px; box-sizing: border-box; background: #E7F0EA; font-family: 'Plus Jakarta Sans', sans-serif; color: #111111; padding: 52px 64px; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 14px; font-weight: 800; letter-spacing: .06em; color: #3E4640">FACE OPTIONS</span>
+<h1 style="margin: 0; font-size: 56px; font-weight: 800; letter-spacing: -.045em; line-height: 1">Pick Radar's face</h1>
+</div>
+<span style="font-size: 15px; color: #2A302C; max-width: 460px; line-height: 1.5">Five directions. Each shows Ready, Found a problem and Happy, plus the small menu button. Press Play and choose one.</span>
+</div>
+
+<sc-for list="{{options}}" as="o" hint-placeholder-count="5">
+<div style="background: #FFFFFF; border-radius: 30px; padding: 18px 24px; display: flex; align-items: center; gap: 28px; {{o.cardStyle}}">
+<div style="width: 280px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0">
+<span style="font-size: 13px; font-weight: 800; color: #5B635D">OPTION {{o.n}}</span>
+<span style="font-size: 26px; font-weight: 800; letter-spacing: -.03em">{{o.name}}</span>
+<span style="font-size: 14px; line-height: 1.45; color: #2A302C">{{o.idea}}</span>
+</div>
+<div style="display: flex; gap: 14px; flex: 1">
+<sc-for list="{{o.faces}}" as="f" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<div style="width: 132px; height: 132px; border-radius: 28px; display: flex; align-items: center; justify-content: center; background: {{f.tile}}">
+<svg viewBox="0 0 100 100" width="116" height="116" role="img" aria-label="{{f.label}}">
+<path d="{{f.ping}}" fill="none" stroke="{{f.pingColor}}" stroke-width="3" stroke-linecap="round" opacity="{{f.pingOp}}"></path>
+<path d="{{f.under}}" fill="{{f.color}}" stroke="#111111" stroke-width="3" stroke-linejoin="round"></path>
+<path d="{{f.body}}" fill="{{f.color}}" stroke="#111111" stroke-width="3" stroke-linejoin="round"></path>
+<path d="{{f.whites}}" fill="#FFFFFF" stroke="#111111" stroke-width="2.5"></path>
+<path d="{{f.lines}}" fill="none" stroke="#111111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="{{f.dot}}" fill="{{f.dotColor}}" stroke="#111111" stroke-width="2.5"></path>
+<path d="{{f.beak}}" fill="#F2C14E" stroke="#111111" stroke-width="2" stroke-linejoin="round"></path>
+<path d="{{f.cheeks}}" fill="#F27E7E" opacity=".75"></path>
+<path d="{{f.brow}}" fill="none" stroke="#111111" stroke-width="3.5" stroke-linecap="round"></path>
+<path d="{{f.eyes}}" fill="none" stroke="#111111" stroke-width="{{f.ew}}" stroke-linecap="round"></path>
+<path d="{{f.mouth}}" fill="none" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span style="font-size: 12px; font-weight: 700; color: #3E4640">{{f.mood}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 120px">
+<div style="background: #FFFFFF; box-shadow: 0 8px 24px rgba(17,17,17,.08); border-radius: 36px; padding: 10px; display: flex">
+<span style="width: 44px; height: 44px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: {{o.btnBg}}">
+<svg viewBox="0 0 100 100" width="40" height="40" aria-hidden="true">
+<path d="{{o.mini.under}}" fill="{{o.mini.color}}" stroke="#111111" stroke-width="5" stroke-linejoin="round"></path>
+<path d="{{o.mini.body}}" fill="{{o.mini.color}}" stroke="#111111" stroke-width="5" stroke-linejoin="round"></path>
+<path d="{{o.mini.whites}}" fill="#FFFFFF" stroke="#111111" stroke-width="4"></path>
+<path d="{{o.mini.lines}}" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round"></path>
+<path d="{{o.mini.dot}}" fill="{{o.mini.dotColor}}" stroke="#111111" stroke-width="4"></path>
+<path d="{{o.mini.beak}}" fill="#F2C14E" stroke="#111111" stroke-width="3"></path>
+<path d="{{o.mini.eyes}}" fill="none" stroke="#111111" stroke-width="11" stroke-linecap="round"></path>
+</svg>
+</span>
+</div>
+<span style="font-size: 12px; font-weight: 700; color: #3E4640">Menu button</span>
+<button type="button" class="pick" onClick="{{o.pick}}" style="{{o.pickStyle}}">{{o.pickLabel}}</button>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1220}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: null };
+  }
+  renderVals() {
+    const N = 'M0 0';
+    const dot = (x, y) => 'M' + x + ' ' + y + ' l0.01 0';
+    const circ = (x, y, r) => 'M' + (x - r) + ' ' + y + ' a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0 a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0';
+    const opts = [
+      { name: 'Dish', idea: 'A small satellite dish with a face. The most literal "radar": it listens to all three trackers.', color: '#7FD69A', btn: '#E2F2E7',
+        body: 'M12 36 Q50 104 88 36 Z', under: 'M44 74 L40 92 H60 L56 74 Z', lines: 'M50 36 L50 16', dot: circ(50, 13, 5),
+        whites: N, beak: N, e: [[40, 50], [60, 50]], m: [50, 62], ping: 'M38 8 A14 14 0 0 1 62 8 M30 4 A22 22 0 0 1 70 4' },
+      { name: 'Owl', idea: 'Big watchful eyes and ear tufts. The night watcher that checks every project at 02:00.', color: '#EAC45A', btn: '#FBE6A9',
+        body: 'M50 18 C78 18 88 42 88 62 C88 84 72 94 50 94 C28 94 12 84 12 62 C12 42 22 18 50 18 Z', under: 'M22 34 L16 12 L38 24 Z M78 34 L84 12 L62 24 Z', lines: N, dot: N,
+        whites: circ(35, 50, 13) + ' ' + circ(65, 50, 13), beak: 'M45 62 L55 62 L50 70 Z', e: [[35, 50], [65, 50]], m: null, ping: N, owl: true },
+      { name: 'Ghost', idea: 'A soft blob with an antenna, closest to your colleague faces. Friendly and calm.', color: '#7FB2EC', btn: '#CFE3FB',
+        body: 'M20 92 V52 A30 30 0 0 1 80 52 V92 L70 84 L60 92 L50 84 L40 92 L30 84 Z', under: N, lines: 'M50 22 L50 10', dot: circ(50, 8, 4.5),
+        whites: N, beak: N, e: [[40, 52], [60, 52]], m: [50, 66], ping: 'M38 4 A14 14 0 0 1 62 4' },
+      { name: 'Lighthouse', idea: 'A small tower with a light beam. It guides projects away from trouble.', color: '#EE9AA0', btn: '#F8CDD0',
+        body: 'M33 94 L39 36 H61 L67 94 Z', under: 'M36 24 H64 V36 H36 Z M32 24 L50 9 L68 24 Z', lines: 'M36 82 H64', dot: N,
+        whites: N, beak: N, e: [[43, 50], [57, 50]], m: [50, 63], ping: 'M66 28 L94 18 M66 32 L94 42', pingAlways: true },
+      { name: 'Orbit', idea: 'A round planet face with a ring. It watches everything that circles around it.', color: '#B9A6F2', btn: '#E7E0FB',
+        body: circ(50, 54, 30), under: N, lines: 'M6 76 C22 96 80 86 94 52', dot: circ(93, 48, 4.5),
+        whites: N, beak: N, e: [[41, 50], [59, 50]], m: [50, 63], ping: N }
+    ];
+    const moods = [
+      { key: 'ready', mood: 'Ready', tile: '#F1F5F2' },
+      { key: 'alert', mood: 'Found a problem', tile: '#F8CDD0' },
+      { key: 'happy', mood: 'Happy', tile: '#E2F2E7' }
+    ];
+    const face = (o, md) => {
+      const [[lx, ly], [rx, ry]] = o.e;
+      const owl = !!o.owl;
+      let eyes, ew, mouth = N, brow = N, cheeks = N, dotColor = '#7FD69A', pingOp = 0;
+      if (md === 'ready') { eyes = dot(lx, ly) + ' ' + dot(rx, ry); ew = owl ? 9 : 8; if (o.m) mouth = 'M' + (o.m[0] - 5) + ' ' + o.m[1] + ' Q' + o.m[0] + ' ' + (o.m[1] + 4) + ' ' + (o.m[0] + 5) + ' ' + o.m[1]; }
+      if (md === 'alert') { eyes = dot(lx, ly) + ' ' + dot(rx, ry); ew = owl ? 13 : 11; dotColor = '#D64545'; pingOp = 1;
+        brow = 'M' + (lx - 8) + ' ' + (ly - (owl ? 17 : 11)) + ' L' + (lx + 5) + ' ' + (ly - (owl ? 15 : 9)) + ' M' + (rx + 8) + ' ' + (ry - (owl ? 17 : 11)) + ' L' + (rx - 5) + ' ' + (ry - (owl ? 15 : 9));
+        if (o.m) mouth = 'M' + (o.m[0] - 3.5) + ' ' + (o.m[1] + 1) + ' a3.5 3.5 0 1 0 7 0 a3.5 3.5 0 1 0 -7 0'; }
+      if (md === 'happy') { eyes = 'M' + (lx - 6) + ' ' + (ly + 2) + ' Q' + lx + ' ' + (ly - 7) + ' ' + (lx + 6) + ' ' + (ly + 2) + ' M' + (rx - 6) + ' ' + (ry + 2) + ' Q' + rx + ' ' + (ry - 7) + ' ' + (rx + 6) + ' ' + (ry + 2); ew = 4.5;
+        if (o.m) mouth = 'M' + (o.m[0] - 8) + ' ' + (o.m[1] - 1) + ' Q' + o.m[0] + ' ' + (o.m[1] + 9) + ' ' + (o.m[0] + 8) + ' ' + (o.m[1] - 1);
+        cheeks = owl ? N : circ(lx - 8, ly + 12, 4.5) + ' ' + circ(rx + 8, ry + 12, 4.5); }
+      if (o.pingAlways) pingOp = md === 'alert' ? 1 : 0.6;
+      return { body: o.body, under: o.under, lines: o.lines, dot: o.dot, whites: o.whites, beak: o.beak, color: o.color,
+        ping: o.ping, pingOp, pingColor: md === 'alert' ? '#D64545' : '#111111', dotColor, eyes, ew, mouth, brow, cheeks };
+    };
+    const options = opts.map((o, i) => {
+      const on = this.state.picked === i;
+      return {
+        n: String(i + 1), name: o.name, idea: o.idea, btnBg: o.btn,
+        faces: moods.map((md) => ({ ...face(o, md.key), mood: md.mood, tile: md.tile, label: o.name + ' face, ' + md.mood })),
+        mini: face(o, 'ready'),
+        cardStyle: on ? 'box-shadow: inset 0 0 0 3px #111111' : '',
+        pickLabel: on ? 'Chosen' : 'Choose this',
+        pickStyle: on ? 'background: #111111; color: #FFFFFF' : 'background: #F1F5F2; color: #111111',
+        pick: () => this.setState({ picked: i })
+      };
+    });
+    return { options };
+  }
+}
+</script>
+</body>
+</html>

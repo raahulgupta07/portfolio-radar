@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Roadmap and dependencies</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7F0EA}
+a{color:#111111;text-decoration:none}a:hover{color:#000000;text-decoration:underline}
+.tabs a{display:inline-flex;align-items:center;padding:0 18px;min-height:44px;border-radius:999px;font-size:14px;font-weight:600;color:#1E2420}
+.tabs a:hover{background:rgba(255,255,255,.7);text-decoration:none}
+.ib{width:44px;height:44px;border-radius:999px;border:0;background:#FFFFFF;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#111111;position:relative;text-decoration:none}
+.ib:hover{background:#F4F7F5;text-decoration:none}
+button:focus-visible,a:focus-visible{outline:2px solid #111111;outline-offset:2px}
+.rail a,.rail button{width:44px;height:44px;border-radius:999px;border:0;display:inline-flex;align-items:center;justify-content:center;color:#111111;position:relative;cursor:pointer;text-decoration:none}
+.rail a:hover,.rail button:hover{filter:brightness(.96);text-decoration:none}
+</style>
+</helmet>
+<div style="min-height: 100vh; font-family: 'Plus Jakarta Sans', sans-serif; color: #111111; background: #E7F0EA; padding: 14px 32px 56px 14px; box-sizing: border-box; display: flex; gap: 24px; align-items: flex-start">
+<nav class="rail" aria-label="Main" style="flex: 0 0 auto; align-self: flex-start; position: sticky; top: max(14px, calc(50vh - 290px)); width: 64px; background: #FFFFFF; border-radius: 36px; padding: 12px 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 8px 24px rgba(17,17,17,.06)">
+<a href="Agent.dc.html" aria-label="Radar, your portfolio agent" title="Radar, your portfolio agent" style="background: #E2F2E7"><dc-import name="RadarFace" mood="ready" size="38" hint-size="38px,38px"></dc-import><span style="position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; border-radius: 99px; background: #D64545; color: #FFFFFF; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF">4</span></a>
+<span style="width: 28px; height: 1px; background: #E3EAE5"></span>
+<a href="Main.dc.html" aria-label="Portfolio overview" title="Portfolio overview" style="background: #E2F2E7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg></a>
+<a href="Project.dc.html" aria-label="Projects" title="Projects" style="background: #FBE6A9"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V4h6v3M3 13h18"></path></svg></a>
+<a href="Roadmap.dc.html" aria-label="Roadmap" title="Roadmap" aria-current="page" style="background: #111111; color: #FFFFFF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M8 12h12M4 18h8"></path></svg></a>
+<a href="Risks.dc.html" aria-label="Risks and strategy" title="Risks and strategy" style="background: #F8CDD0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"></path><path d="M12 8v5M12 16v.5" stroke-linecap="round"></path></svg></a>
+<a href="Admin.dc.html" aria-label="Admin and agent rules" title="Admin and agent rules" style="background: #F1F5F2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg></a>
+<span style="width: 28px; height: 1px; background: #E3EAE5"></span>
+<button type="button" aria-label="Search everything" title="Search" style="background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+<a href="Agent.dc.html" aria-label="Alerts, 4 new" title="Alerts" style="background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4"></path></svg><span style="position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 99px; background: #D64545"></span></a>
+<div title="Average progress 50%" style="display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="34" height="34" viewBox="0 0 36 36" role="img" aria-label="Average progress 50 percent"><circle cx="18" cy="18" r="14" fill="none" stroke="#E3EAE5" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-dasharray="44 88" transform="rotate(-90 18 18)"></circle></svg><span style="font-size: 11px; font-weight: 800">50%</span></div>
+<span title="Rahul Gupta · City SSO" style="width: 40px; height: 40px; border-radius: 999px; background: #111111; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px">RG</span>
+</nav>
+<div style="flex: 1; min-width: 0; max-width: 1440px; margin: 0 auto; padding-top: 12px; display: flex; flex-direction: column; gap: 28px">
+
+
+<section style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px">
+<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 48px; font-weight: 700; letter-spacing: -.035em; line-height: 1">Roadmap</h1>
+<span style="height: 44px; border-radius: 999px; border: 1.5px solid #B9C7BD; display: inline-flex; align-items: center; padding: 0 16px; font-size: 14px; font-weight: 600">Jul 2026 – Jan 2027</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; font-weight: 600">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 99px; background: #CFE3FB"></span>JIRA</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 99px; background: #FBE6A9"></span>OpenProject</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 18px; height: 10px; border-radius: 99px; background: #F8CDD0"></span>Multica</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; background: #111111; transform: rotate(45deg)"></span>Done</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; background: #FFFFFF; box-shadow: inset 0 0 0 2px #111111; transform: rotate(45deg)"></span>Planned</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; background: #C23B3B; transform: rotate(45deg)"></span>Overdue</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 2px; height: 14px; background: #111111"></span>Today, 19 Oct</span>
+</div>
+</section>
+
+<section aria-label="Timeline" style="background: #FFFFFF; border-radius: 32px; padding: 24px; overflow-x: auto">
+<div style="min-width: 1040px; display: flex; flex-direction: column">
+<div style="display: grid; grid-template-columns: 280px 1fr; align-items: end; padding-bottom: 10px; border-bottom: 1px solid #E3EAE5">
+<span style="font-size: 12px; font-weight: 600; color: #5B635D">Project</span>
+<div style="position: relative; height: 22px">
+<sc-for list="{{months}}" as="mo" hint-placeholder-count="7">
+<span style="position: absolute; top: 0; left: {{mo.left}}%; width: {{mo.width}}%; font-size: 12px; font-weight: 700; color: #3E4640; padding-left: 6px; box-sizing: border-box; border-left: 1px solid #E3EAE5">{{mo.label}}</span>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+<div style="display: grid; grid-template-columns: 280px 1fr; align-items: center; min-height: 58px; border-bottom: 1px solid #F1F5F2">
+<div style="display: flex; align-items: center; gap: 10px; padding-right: 12px; min-width: 0">
+<span style="width: 10px; height: 10px; border-radius: 99px; flex-shrink: 0; background: {{r.healthDot}}" title="{{r.healthLabel}}"></span>
+<div style="display: flex; flex-direction: column; min-width: 0">
+<a href="Project.dc.html" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</a>
+<span style="font-size: 11px; color: #5B635D">{{r.code}} · {{r.healthLabel}}</span>
+</div>
+</div>
+<div style="position: relative; height: 58px">
+<span style="position: absolute; top: 0; bottom: 0; left: {{today}}%; width: 2px; background: #111111"></span>
+<span style="position: absolute; top: 20px; height: 18px; left: {{r.left}}%; width: {{r.width}}%; border-radius: 99px; background: {{r.bg}}"></span>
+<sc-for list="{{r.ms}}" as="m" hint-placeholder-count="2">
+<span title="{{m.label}}" style="position: absolute; top: 22px; left: {{m.left}}%; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg); {{m.style}}"></span>
+</sc-for>
+<sc-if value="{{r.dep}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 2px; left: {{r.depLeft}}%; font-size: 11px; font-weight: 700; background: #111111; color: #FFFFFF; border-radius: 99px; padding: 2px 8px; white-space: nowrap">{{r.depText}}</span>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-labelledby="dep-h" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px">
+<h2 id="dep-h" style="margin: 0; font-size: 18px; font-weight: 700">Dependencies between projects</h2>
+<span style="width: 26px; height: 26px; border-radius: 999px; background: #111111; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700">3</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px">
+<div style="background: #F8CDD0; border-radius: 30px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+<span style="align-self: flex-start; background: #111111; color: #FFFFFF; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700">Blocked</span>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="background: #FFFFFF; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">POS03</strong><span style="font-size: 12px">Vendor contract · 15 Oct</span></span>
+<svg width="28" height="16" viewBox="0 0 28 16" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8h22M18 2l6 6-6 6"></path></svg>
+<span style="background: #FFFFFF; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">LOYAL02</strong><span style="font-size: 12px">Beta release · 05 Nov</span></span>
+</div>
+<span style="font-size: 13px; line-height: 1.5">The first step is 4 days late, so the beta date is at risk until it is signed.</span>
+</div>
+<div style="background: #FFFFFF; border-radius: 30px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+<span style="align-self: flex-start; background: #E2F2E7; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700">On track</span>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="background: #F4F7F5; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">DWH04</strong><span style="font-size: 12px">Cut-over rehearsal · 07 Nov</span></span>
+<svg width="28" height="16" viewBox="0 0 28 16" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8h22M18 2l6 6-6 6"></path></svg>
+<span style="background: #F4F7F5; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">FC03</strong><span style="font-size: 12px">Model v1 review · 14 Nov</span></span>
+</div>
+<span style="font-size: 13px; line-height: 1.5; color: #3E4640">Forecasting needs warehouse data. 7 days of buffer.</span>
+</div>
+<div style="background: #FFFFFF; border-radius: 30px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px">
+<span style="align-self: flex-start; background: #E2F2E7; border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700">On track</span>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="background: #F4F7F5; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">GPT01</strong><span style="font-size: 12px">Rollout wave 2 · 31 Oct</span></span>
+<svg width="28" height="16" viewBox="0 0 28 16" fill="none" stroke="#111111" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8h22M18 2l6 6-6 6"></path></svg>
+<span style="background: #F4F7F5; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column"><strong style="font-size: 14px">AGT04</strong><span style="font-size: 12px">Scope sign-off · 25 Nov</span></span>
+</div>
+<span style="font-size: 13px; line-height: 1.5; color: #3E4640">Agent Ops Console builds on wave 2 agents. 25 days of buffer.</span>
+</div>
+</div>
+<p style="margin: 0; font-size: 12px; color: #3E4640">Dependencies are read from issue links in the trackers (e.g. JIRA "blocks") and from cross-project links the PMO records.</p>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const start = Date.parse('2026-07-01');
+    const end = Date.parse('2027-02-01');
+    const span = end - start;
+    const pos = (d) => Math.max(0, Math.min(100, (Date.parse(d) - start) / span * 100));
+    const monthStarts = ['2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01', '2027-01-01', '2027-02-01'];
+    const names = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan 2027'];
+    const months = names.map((n, i) => ({ label: n, left: pos(monthStarts[i]).toFixed(2), width: (pos(monthStarts[i + 1]) - pos(monthStarts[i])).toFixed(2) }));
+    const srcBg = { jira: '#CFE3FB', openproject: '#FBE6A9', multica: '#F8CDD0' };
+    const health = { green: ['#2E8B57', 'On track'], amber: ['#B98300', 'At risk'], red: ['#C23B3B', 'Off track'], done: ['#111111', 'Done'] };
+    const ms = {
+      done: 'background: #111111',
+      plan: 'background: #FFFFFF; box-shadow: inset 0 0 0 2px #111111',
+      late: 'background: #C23B3B'
+    };
+    const data = [
+      { code: 'CHL-DP-POS03', name: 'POS Integration', src: 'jira', h: 'red', s: '2026-09-01', e: '2026-12-31', m: [['2026-10-15', 'Vendor contract signed · overdue', 'late']], dep: 'Blocks LOYAL02', depAt: '2026-10-22' },
+      { code: 'CHL-DP-LOYAL02', name: 'Loyalty App v3', src: 'jira', h: 'amber', s: '2026-08-01', e: '2026-12-20', m: [['2026-11-05', 'Beta release · 05 Nov', 'plan']], dep: 'Waits for POS03', depAt: '2026-11-08' },
+      { code: 'CHL-DP-PORTAL01', name: 'Customer Portal Revamp', src: 'jira', h: 'green', s: '2026-07-01', e: '2026-12-15', m: [['2026-08-08', 'Discovery and design · done', 'done'], ['2026-09-30', 'Core build · done', 'done'], ['2026-10-28', 'UAT sign-off · 28 Oct', 'plan'], ['2026-11-20', 'Pilot · 20 Nov', 'plan'], ['2026-12-15', 'Go-live · 15 Dec', 'plan']] },
+      { code: 'CHL-DP-HR05', name: 'HR Self-Service', src: 'jira', h: 'green', s: '2026-11-11', e: '2027-01-31', m: [['2026-11-11', 'Project kick-off · 11 Nov', 'plan']] },
+      { code: 'CHL-IT-DWH04', name: 'Data Warehouse Migration', src: 'openproject', h: 'green', s: '2026-07-15', e: '2026-11-30', m: [['2026-11-07', 'Cut-over rehearsal · 07 Nov', 'plan']] },
+      { code: 'CHL-IT-DAAI-FC03', name: 'Demand Forecasting', src: 'openproject', h: 'green', s: '2026-08-01', e: '2026-12-15', m: [['2026-11-14', 'Model v1 review · 14 Nov', 'plan']] },
+      { code: 'CMHL-IT-BI01', name: 'Group BI Dashboards', src: 'openproject', h: 'done', s: '2026-07-01', e: '2026-09-30', m: [['2026-09-30', 'Handover complete · done', 'done']] },
+      { code: 'CHL-IT-DAAI-GPT01', name: 'CityGPT Agents', src: 'multica', h: 'green', s: '2026-07-01', e: '2026-12-31', m: [['2026-10-31', 'Agent rollout, wave 2 · 31 Oct', 'plan']] },
+      { code: 'CHL-IT-DAAI-DOC02', name: 'Document AI Extraction', src: 'multica', h: 'green', s: '2026-08-15', e: '2026-12-15', m: [['2026-11-20', 'Pilot with Finance · 20 Nov', 'plan']] },
+      { code: 'CHL-IT-DAAI-AGT04', name: 'Agent Ops Console', src: 'multica', h: 'amber', s: '2026-10-01', e: '2027-01-31', m: [['2026-11-25', 'Scope sign-off · 25 Nov', 'plan']] }
+    ];
+    const rows = data.map((p) => ({
+      code: p.code,
+      name: p.name,
+      bg: srcBg[p.src],
+      healthDot: health[p.h][0],
+      healthLabel: health[p.h][1],
+      left: pos(p.s).toFixed(2),
+      width: (pos(p.e) - pos(p.s)).toFixed(2),
+      ms: p.m.map((x) => ({ left: pos(x[0]).toFixed(2), label: x[1], style: ms[x[2]] })),
+      dep: !!p.dep,
+      depText: p.dep || '',
+      depLeft: p.depAt ? pos(p.depAt).toFixed(2) : '0'
+    }));
+    return { months, rows, today: pos('2026-10-19').toFixed(2) };
+  }
+}
+</script>
+</body>
+</html>

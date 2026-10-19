@@ -1,0 +1,283 @@
+{
+  "note": "Sample data used in the designs. Use for seeds and mock connectors. Not real.",
+  "as_of": "2026-10-19T02:00:00+06:30",
+  "sources": [
+    {
+      "id": "jira",
+      "name": "JIRA",
+      "team": "Digital Teams",
+      "status": "ok",
+      "last_sync": "2026-10-19T02:00:00+06:30"
+    },
+    {
+      "id": "openproject",
+      "name": "OpenProject",
+      "team": "Data Team",
+      "status": "ok",
+      "last_sync": "2026-10-19T02:00:00+06:30"
+    },
+    {
+      "id": "multica",
+      "name": "Multica",
+      "team": "AI and Agent Teams",
+      "status": "failed",
+      "last_good_sync": "2026-10-18T02:00:00+06:30",
+      "error": "401 Unauthorized: token expired"
+    }
+  ],
+  "prefixes": [
+    "CHL-DP-",
+    "CHL-IT-",
+    "CHL-IT-DAAI-",
+    "CMHL-IT-"
+  ],
+  "projects": [
+    {
+      "code": "CHL-DP-POS03",
+      "name": "POS Integration",
+      "team": "Digital Teams",
+      "source": "jira",
+      "health": "red",
+      "status": "On hold",
+      "percent_done": 30,
+      "next_milestone": "Vendor contract signed",
+      "next_milestone_due": "2026-10-15",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-09-01",
+      "end_date": "2026-12-31",
+      "source_updated_at": "2026-10-12"
+    },
+    {
+      "code": "CHL-DP-LOYAL02",
+      "name": "Loyalty App v3",
+      "team": "Digital Teams",
+      "source": "jira",
+      "health": "amber",
+      "status": "In progress",
+      "percent_done": 41,
+      "next_milestone": "Beta release",
+      "next_milestone_due": "2026-11-05",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-08-01",
+      "end_date": "2026-12-20",
+      "source_updated_at": "2026-10-19"
+    },
+    {
+      "code": "CHL-IT-DAAI-AGT04",
+      "name": "Agent Ops Console",
+      "team": "Agent Team",
+      "source": "multica",
+      "health": "amber",
+      "status": "Not started",
+      "percent_done": 5,
+      "next_milestone": "Scope sign-off",
+      "next_milestone_due": "2026-11-25",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-10-01",
+      "end_date": "2027-01-31",
+      "source_updated_at": "2026-10-18"
+    },
+    {
+      "code": "CHL-DP-PORTAL01",
+      "name": "Customer Portal Revamp",
+      "team": "Digital Teams",
+      "source": "jira",
+      "health": "green",
+      "status": "In progress",
+      "percent_done": 64,
+      "next_milestone": "UAT sign-off",
+      "next_milestone_due": "2026-10-28",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-07-01",
+      "end_date": "2026-12-15",
+      "source_updated_at": "2026-10-18"
+    },
+    {
+      "code": "CHL-IT-DAAI-GPT01",
+      "name": "CityGPT Agents",
+      "team": "AI Team",
+      "source": "multica",
+      "health": "green",
+      "status": "In progress",
+      "percent_done": 72,
+      "next_milestone": "Agent rollout, wave 2",
+      "next_milestone_due": "2026-10-31",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-07-01",
+      "end_date": "2026-12-31",
+      "source_updated_at": "2026-10-18"
+    },
+    {
+      "code": "CHL-IT-DWH04",
+      "name": "Data Warehouse Migration",
+      "team": "Data Team",
+      "source": "openproject",
+      "health": "green",
+      "status": "In progress",
+      "percent_done": 83,
+      "next_milestone": "Cut-over rehearsal",
+      "next_milestone_due": "2026-11-07",
+      "strategy_tag": "Benchmark of Excellence",
+      "start_date": "2026-07-15",
+      "end_date": "2026-11-30",
+      "source_updated_at": "2026-10-19"
+    },
+    {
+      "code": "CHL-IT-DAAI-FC03",
+      "name": "Demand Forecasting",
+      "team": "Data Team",
+      "source": "openproject",
+      "health": "green",
+      "status": "In progress",
+      "percent_done": 48,
+      "next_milestone": "Model v1 review",
+      "next_milestone_due": "2026-11-14",
+      "strategy_tag": "Benchmark of Excellence",
+      "start_date": "2026-08-01",
+      "end_date": "2026-12-15",
+      "source_updated_at": "2026-10-17"
+    },
+    {
+      "code": "CHL-IT-DAAI-DOC02",
+      "name": "Document AI Extraction",
+      "team": "AI Team",
+      "source": "multica",
+      "health": "green",
+      "status": "In progress",
+      "percent_done": 55,
+      "next_milestone": "Pilot with Finance",
+      "next_milestone_due": "2026-11-20",
+      "strategy_tag": "Innovative Market Leader",
+      "start_date": "2026-08-15",
+      "end_date": "2026-12-15",
+      "source_updated_at": "2026-10-18"
+    },
+    {
+      "code": "CHL-DP-HR05",
+      "name": "HR Self-Service",
+      "team": "Digital Teams",
+      "source": "jira",
+      "health": "green",
+      "status": "Not started",
+      "percent_done": 0,
+      "next_milestone": "Project kick-off",
+      "next_milestone_due": "2026-11-11",
+      "strategy_tag": "Employer of Choice",
+      "start_date": "2026-11-11",
+      "end_date": "2027-01-31",
+      "source_updated_at": "2026-10-16"
+    },
+    {
+      "code": "CMHL-IT-BI01",
+      "name": "Group BI Dashboards",
+      "team": "Data Team",
+      "source": "openproject",
+      "health": "done",
+      "status": "Done",
+      "percent_done": 100,
+      "next_milestone": "Handover complete",
+      "next_milestone_due": "2026-09-30",
+      "strategy_tag": "Benchmark of Excellence",
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30",
+      "source_updated_at": "2026-10-01"
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "CHL-DP-POS03",
+      "to": "CHL-DP-LOYAL02",
+      "kind": "blocks"
+    },
+    {
+      "from": "CHL-IT-DWH04",
+      "to": "CHL-IT-DAAI-FC03",
+      "kind": "blocks"
+    },
+    {
+      "from": "CHL-IT-DAAI-GPT01",
+      "to": "CHL-IT-DAAI-AGT04",
+      "kind": "blocks"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "title": "Vendor contract delayed",
+      "project": "CHL-DP-POS03",
+      "likelihood": "High",
+      "impact": "High"
+    },
+    {
+      "id": "R2",
+      "title": "Multica data out of date",
+      "project": "multica",
+      "likelihood": "High",
+      "impact": "Medium"
+    },
+    {
+      "id": "R3",
+      "title": "Warehouse cut-over slips",
+      "project": "CHL-IT-DWH04",
+      "likelihood": "Medium",
+      "impact": "Medium"
+    },
+    {
+      "id": "R4",
+      "title": "Agent Ops scope not clear",
+      "project": "CHL-IT-DAAI-AGT04",
+      "likelihood": "Medium",
+      "impact": "Low"
+    },
+    {
+      "id": "R5",
+      "title": "UAT defect backlog",
+      "project": "CHL-DP-PORTAL01",
+      "likelihood": "Low",
+      "impact": "Medium"
+    }
+  ],
+  "non_compliant": [
+    {
+      "name": "Mobile Wallet POC",
+      "source": "jira",
+      "reason": "No prefix"
+    },
+    {
+      "name": "CHLIT-ANALYTICS Sales Insights",
+      "source": "openproject",
+      "reason": "Prefix not recognised"
+    },
+    {
+      "name": "Chatbot experiments",
+      "source": "multica",
+      "reason": "No prefix"
+    }
+  ],
+  "weekly_avg_progress": [
+    {
+      "week": "2026-09-14",
+      "pct": 38
+    },
+    {
+      "week": "2026-09-21",
+      "pct": 41
+    },
+    {
+      "week": "2026-09-28",
+      "pct": 43
+    },
+    {
+      "week": "2026-10-05",
+      "pct": 46
+    },
+    {
+      "week": "2026-10-12",
+      "pct": 48
+    },
+    {
+      "week": "2026-10-19",
+      "pct": 50
+    }
+  ]
+}
