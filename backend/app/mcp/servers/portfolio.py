@@ -2,15 +2,19 @@
 database. Read-only. Every project row carries its source, sync time and a
 `stale` flag, so answers can show their evidence."""
 
+import base64
+from datetime import datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
 from app.db import session_scope
 from app.health import today_in
 from app.mcp.guard import ToolError
+from app.mcp.pii import redact
 from app.mcp.registry import ServerDef, ToolContext
-from app.portfolio import queries
+from app.portfolio import onepager, queries
 
 server = ServerDef(
     name="portfolio",
@@ -110,3 +114,34 @@ async def get_sync_status(args, ctx: ToolContext) -> dict:
     """Each source's last sync, last good sync, error and whether its data is stale."""
     async with session_scope() as session:
         return await queries.sync_status(session)
+
+
+# -- PDF one-pagers (FR-16) ----------------------------------------------------------
+
+def _pdf(content: bytes, filename: str) -> dict:
+    return {"filename": filename, "media_type": "application/pdf", "bytes": len(content),
+            "content_base64": base64.b64encode(content).decode()}
+
+
+@server.tool(callers={"human"}, roles={"viewer"}, input_model=Code, redact=False)
+async def get_project_pdf(args: Code, ctx: ToolContext) -> dict:
+    """One project as a one-page PDF (A4): health, % done, next milestone, Radar's note, milestones, sprint,
+    trend, what changed, risks and dependencies. Returned as base64. Personal data is removed before drawing."""
+    async with session_scope() as session:
+        result = await queries.project_detail(session, args.code, today_in(ctx.settings))
+    if result is None:
+        raise ToolError(f"No project with code {args.code.upper()}")
+    content = onepager.project_pdf(redact(result), datetime.now(ZoneInfo(ctx.settings.timezone)), ctx.caller.id)
+    return _pdf(content, f"{result['code']}-one-pager.pdf")
+
+
+@server.tool(callers={"human"}, roles={"viewer"}, redact=False)
+async def get_overview_pdf(args, ctx: ToolContext) -> dict:
+    """The whole portfolio as a one-page PDF (A4 landscape) for the Steering Committee: health counts with change,
+    sources, 6-week trend, projects that need attention, next milestones and Radar's findings. Returned as base64."""
+    today = today_in(ctx.settings)
+    async with session_scope() as session:
+        result = await queries.overview(session, today)
+    content = onepager.overview_pdf(redact(result), datetime.now(ZoneInfo(ctx.settings.timezone)), ctx.caller.id)
+    return _pdf(content, f"portfolio-{today.isoformat()}.pdf")
+

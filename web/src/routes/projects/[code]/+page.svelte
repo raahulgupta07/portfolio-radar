@@ -53,7 +53,7 @@
 		<button type="button" class="icon-btn" aria-label="Copy link" title={copied ? 'Link copied' : 'Copy link'} onclick={copy}>
 			<Icon name={copied ? 'check' : 'external'} />
 		</button>
-		<button type="button" class="icon-btn" aria-label="Print or save as PDF" title="Print or save as PDF" onclick={() => window.print()}><Icon name="file" /></button>
+		<a class="icon-btn" href={`/projects/${p.code}/one-pager.pdf`} target="_blank" rel="noopener" data-sveltekit-reload aria-label="One-pager PDF of this project" title="One-pager PDF"><Icon name="file" /></a>
 	</div>
 </section>
 

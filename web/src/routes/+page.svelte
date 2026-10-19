@@ -31,7 +31,7 @@
 			<input type="search" placeholder="Search code or name" bind:value={query} />
 		</label>
 		<a class="icon-btn" href="/export/projects.csv" aria-label="Export projects to Excel (CSV)" title="Export to Excel (CSV)"><Icon name="download" /></a>
-		<button type="button" class="icon-btn" aria-label="Print or save as PDF" title="Print or save as PDF" onclick={() => window.print()}><Icon name="file" /></button>
+		<a class="icon-btn" href="/export/portfolio.pdf" target="_blank" rel="noopener" data-sveltekit-reload aria-label="One-pager PDF for the Steering Committee" title="One-pager PDF"><Icon name="file" /></a>
 		<span class="viewonly"><Icon name="lock" size={15} />View only · refresh 02:00 daily</span>
 	</div>
 </section>

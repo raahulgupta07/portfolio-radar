@@ -165,3 +165,21 @@ async def test_omni_invoke_goes_through_the_guard_and_is_audited(gw):
     pairs = [(c.server, c.tool, c.outcome) for c in rows]
     assert ("portfolio", "list_projects", "ok") in pairs
     assert ("admin", "run_sync", "denied") in pairs
+
+
+# -- PDF one-pagers (FR-16) --------------------------------------------------------
+
+async def test_project_and_portfolio_one_pagers_are_single_page_pdfs(gw):
+    import base64
+    import re
+
+    for tool, args, name in (("get_project_pdf", {"code": "chl-dp-pos03"}, "CHL-DP-POS03-one-pager.pdf"),
+                             ("get_overview_pdf", {}, "portfolio-2026-10-19.pdf")):
+        r = await ok(gw, VIEWER, "portfolio", tool, args)
+        pdf = base64.b64decode(r["content_base64"])
+        assert r["filename"] == name and pdf.startswith(b"%PDF") and r["bytes"] == len(pdf)
+        assert len(re.findall(rb"/Type /Page\b", pdf)) == 1
+    agent = await gw.call(RADAR, "portfolio", "get_overview_pdf", {})
+    assert agent.outcome == "denied"  # PDFs are for people; agents read the data tools
+    missing = await gw.call(VIEWER, "portfolio", "get_project_pdf", {"code": "NOPE-1"})
+    assert missing.outcome == "error" and "No project" in missing.message
