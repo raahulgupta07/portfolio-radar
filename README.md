@@ -11,9 +11,9 @@ Everything goes through one **City MCP Gateway**. The nightly sync, the web app,
 
 ![Overview](docs/images/overview.png)
 
-| Radar answers with evidence | Admin → Connections | Admin → People |
+| Sign in | Radar answers with evidence | Admin → People |
 |---|---|---|
-| ![Radar](docs/images/radar.png) | ![Connections](docs/images/admin-connections.png) | ![People](docs/images/admin-people.png) |
+| ![Login](docs/images/login.png) | ![Radar](docs/images/radar.png) | ![People](docs/images/admin-people.png) |
 
 **Contents:**
 
