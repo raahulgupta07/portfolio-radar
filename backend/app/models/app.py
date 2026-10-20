@@ -258,3 +258,29 @@ class RadarMemory(Base):
     text: Mapped[str] = mapped_column(Text)
     created_by: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PoProgram(Base):
+    """A program from the program office (charter, budget, team). Imported, read-only in the app."""
+
+    __tablename__ = "po_program"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), default="")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # the whole charter
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PoProject(Base):
+    """A program-office project (owner, RACI, next step). Imported, read-only in the app."""
+
+    __tablename__ = "po_project"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    program_id: Mapped[str] = mapped_column(String(64), index=True, default="")
+    name: Mapped[str] = mapped_column(String(300), default="")
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

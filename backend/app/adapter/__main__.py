@@ -4,6 +4,7 @@
     python -m app.adapter sync                  sync now, through the gateway over MCP/HTTP
     python -m app.adapter sync --source jira    one source only
     python -m app.adapter sync --in-process     no running gateway needed (dev); the guard still runs
+    python -m app.adapter po-import FILE        load program office data (programs, charters, projects) from a JSON file
     python -m app.adapter demo [--reset]        dev only: sample data with history (see app/adapter/demo.py)
 """
 
@@ -29,11 +30,23 @@ async def main() -> None:
     sub.add_parser("seed")
     d = sub.add_parser("demo")
     d.add_argument("--reset", action="store_true", help="empty the portfolio tables first (dev only)")
+    po = sub.add_parser("po-import")
+    po.add_argument("file")
     s = sub.add_parser("sync")
     s.add_argument("--source")
     s.add_argument("--in-process", action="store_true")
     args = p.parse_args()
     settings = get_settings()
+
+    if args.cmd == "po-import":
+        from pathlib import Path
+
+        from app.db import session_scope
+        from app.portfolio.programs import import_file
+
+        async with session_scope() as session:
+            print(json.dumps(await import_file(session, Path(args.file))))
+        return
 
     if args.cmd == "seed":
         print(json.dumps(await seed()))

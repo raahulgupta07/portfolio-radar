@@ -153,6 +153,16 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] OpenRouter as an LLM provider, in env or Admin
 - [x] Docker Compose reads optional `backend/.env` and `web/.env` for your own values
 
+## Phase 21: Programs (program office view) ✅
+
+- [x] New read-only **Programs** screen: program switcher, KPI tiles that filter, Charter / Projects / RACI tabs
+- [x] Charter: manager, sponsor, dates, completeness checklist, status summary, scope, benefits, risks, budget, milestones, measurables, team, steering committee
+- [x] Projects table with owner, workstream, next step, decision needed; filters, sort, search (also owners and RACI names)
+- [x] Download for Excel (CSV with byte-order mark) of the filtered projects
+- [x] Data comes from the program office file: `python -m app.adapter po-import <file>` (tables `app.po_program`, `app.po_project`, migration 0007); tool `portfolio.get_programs`, off until an admin turns it on
+- [ ] Program switcher on Overview, Roadmap and Risks (tracker projects carry no program yet)
+- [ ] Change history with editor names (needs a source for it)
+
 ## Still open (needs input or access)
 
 - [ ] JIRA and OpenProject read-only tokens, then confirm the field mapping in Admin

@@ -14,7 +14,7 @@ from app.health import today_in
 from app.mcp.guard import ToolError
 from app.mcp.pii import redact
 from app.mcp.registry import ServerDef, ToolContext
-from app.portfolio import onepager, queries
+from app.portfolio import onepager, programs, queries
 
 server = ServerDef(
     name="portfolio",
@@ -107,6 +107,14 @@ async def get_risks(args: OptionalCode, ctx: ToolContext) -> dict:
     """Risk register with likelihood and impact, a likelihood × impact matrix, and health by 2030 strategy tag."""
     async with session_scope() as session:
         return await queries.risks(session, args.code, ctx.settings.strategy_aspirations)
+
+
+@server.tool(callers=CALLERS, roles=ROLES)
+async def get_programs(args, ctx: ToolContext) -> dict:
+    """Program office view: each program with its charter, budget, milestones, measurables, team and steering
+    committee, plus its projects with owner, RACI, next step and decision needed, and summary counts. Read-only."""
+    async with session_scope() as session:
+        return await programs.programs_view(session, today_in(ctx.settings))
 
 
 @server.tool(callers=CALLERS, roles=ROLES)

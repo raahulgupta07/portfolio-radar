@@ -19,6 +19,7 @@
 		{ href: '/projects', label: 'Projects', icon: 'projects', bg: '#FBE6A9' },
 		{ href: '/roadmap', label: 'Roadmap', icon: 'roadmap', bg: '#CFE3FB' },
 		{ href: '/risks', label: 'Risks and strategy', icon: 'risks', bg: '#F8CDD0' },
+		{ href: '/programs', label: 'Programs', icon: 'programs', bg: '#E4DAF5' },
 		...(isAdmin ? [{ href: '/admin', label: 'Admin and agent rules', icon: 'admin', bg: '#F1F5F2' }] : [])
 	]);
 	const active = (href: string) =>

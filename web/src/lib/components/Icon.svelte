@@ -6,6 +6,7 @@
 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 	{#if name === 'home'}<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />
 	{:else if name === 'projects'}<rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V4h6v3M3 13h18" />
+	{:else if name === 'programs'}<rect x="3" y="4" width="7" height="7" rx="1.5" /><rect x="14" y="4" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="18" height="6" rx="1.5" />
 	{:else if name === 'roadmap'}<path d="M4 6h10M8 12h12M4 18h8" />
 	{:else if name === 'risks'}<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" /><path d="M12 8v5M12 16v.5" />
 	{:else if name === 'admin'}<rect x="4" y="4" width="7" height="7" rx="2" /><rect x="13" y="4" width="7" height="7" rx="2" /><rect x="4" y="13" width="7" height="7" rx="2" /><rect x="13" y="13" width="7" height="7" rx="2" />

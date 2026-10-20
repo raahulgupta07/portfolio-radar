@@ -75,6 +75,7 @@ flowchart LR
 | Radar | `backend/app/radar/` | Rule checks, morning message, questions to approvers, drafts, chat answers (rules, or the LLM with evidence), notifier. |
 | Worker | `backend/app/worker.py` | Runs the nightly sync and Radar's check; answers chat; sends approved drafts. |
 | Web app | `web/` | The screens, plus PDF one-pagers and CSV export. It talks only to the gateway (MCP), never to the database. |
+| Programs | `backend/app/portfolio/programs.py`, `web/src/routes/programs/` | Read-only program office view: charters, budget, RACI, next steps. Load the file with `python -m app.adapter po-import <file>`, then turn on `portfolio.get_programs` in Admin → MCP tools. |
 | Teams chat | `backend/app/teams/`, `teams/` | 1:1 chat with Radar in Microsoft Teams, through the gateway. |
 | Azure | `infra/`, `.github/workflows/` | Bicep: Container Apps, private PostgreSQL, Key Vaults, managed identities. CI and deploy workflows. |
 
