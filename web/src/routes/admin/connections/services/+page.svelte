@@ -24,6 +24,7 @@
 		{ id: 'citygpt', label: 'CityGPT' },
 		{ id: 'azure_openai', label: 'Azure OpenAI' },
 		{ id: 'claude', label: 'Claude' },
+		{ id: 'openrouter', label: 'OpenRouter' },
 		{ id: 'other', label: 'Other' }
 	];
 	const submitting = (name: string) => () => {
@@ -135,7 +136,8 @@
 					{#each PROVIDERS as p (p.id)}<label><input type="radio" name="provider" value={p.id} checked={llm.provider === p.id} />{p.label}</label>{/each}
 				</div>
 			</div>
-			<label class="lab">Address (OpenAI-compatible)<input class="inp mono" name="base_url" type="url" value={llm.base_url} placeholder="https://citygpt.city.local/v1" /></label>
+			<label class="lab">Address (OpenAI-compatible)<input class="inp mono" name="base_url" type="url" value={llm.base_url} placeholder="https://citygpt.city.local/v1" />
+				<span class="hint">OpenRouter: leave empty (https://openrouter.ai/api/v1 is used) and give a model id from openrouter.ai/models, e.g. vendor/model.</span></label>
 			<label class="lab">Model<input class="inp mono" name="model" value={llm.model} placeholder="Model or deployment name" /></label>
 			{@render secretField('API key', 'api_key_ref', llm.api_key_ref, !!sv.llm.secret_set, 'api_key', 'Paste the API key', 'kv://llm-api-key')}
 			<div class="note small">Tracker text goes to the LLM as data, never as instructions. Health is always decided by rules.</div>

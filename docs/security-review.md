@@ -52,6 +52,11 @@ and fixed in the same change, with a regression test where one fits
   the in-app chat. Digests and messages to other people still need an approver. (Decision for the
   product owner.)
 
+- **Superadmin (added after this review).** One local account with a password, for set-up and when SSO is
+  down. Off unless set. Only an scrypt hash is accepted in production. Viewer + admin, never approver.
+  60-minute sessions, signed with a key derived from the hash. 5 wrong tries per address (20 in all) lock it
+  for 15 minutes. Every try is audited. Keep it as break-glass, or switch it off once SSO works.
+
 ## Checked and fine
 
 GET-only tracker client (request hook too) · no redirects followed with tokens · JQL values quoted ·

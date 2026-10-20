@@ -61,6 +61,13 @@ param webAllowedIps array = []
 @description('Two-way Teams chat: the bot app registration client ID. Empty = no Azure Bot. Its secret is pasted in Admin → Connections → Teams')
 param teamsBotAppId string = ''
 
+@description('Superadmin name (local account for set-up and when SSO is down). Empty = off')
+param superadminUsername string = ''
+
+@description('Superadmin password hash from `python -m app.localadmin hash`. Stored in Key Vault')
+@secure()
+param superadminPasswordHash string = ''
+
 param timezone string = 'Asia/Yangon'
 
 param tags object = {
@@ -255,6 +262,22 @@ resource kvDatabaseUrl 'Microsoft.KeyVault/vaults/secrets@2024-11-01' = {
   }
 }
 
+resource kvSuperadmin 'Microsoft.KeyVault/vaults/secrets@2024-11-01' = if (!empty(superadminUsername)) {
+  parent: kv
+  name: 'superadmin-password-hash'
+  properties: { value: superadminPasswordHash, contentType: 'scrypt hash' }
+}
+
+resource kvSuperadminReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(superadminUsername)) {
+  name: guid(kv.id, 'superadmin-password-hash', ids[0].id, roles.kvSecretsUser)
+  scope: kvSuperadmin
+  properties: {
+    principalId: ids[0].properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.kvSecretsUser)
+  }
+}
+
 resource kvWebSecret 'Microsoft.KeyVault/vaults/secrets@2024-11-01' = {
   parent: kv
   name: 'web-entra-client-secret'
@@ -398,7 +421,8 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
         allowInsecure: false // https only, also inside the environment (people's tokens travel here)
       }
       registries: [{ server: acr.properties.loginServer, identity: ids[0].id }]
-      secrets: [{ name: 'database-url', keyVaultUrl: kvDatabaseUrl.properties.secretUri, identity: ids[0].id }]
+      secrets: concat([{ name: 'database-url', keyVaultUrl: kvDatabaseUrl.properties.secretUri, identity: ids[0].id }],
+        empty(superadminUsername) ? [] : [{ name: 'superadmin-hash', keyVaultUrl: kvSuperadmin!.properties.secretUri, identity: ids[0].id }])
     }
     template: {
       containers: [{
@@ -417,6 +441,9 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
           { name: 'DEV_TOKENS', value: '{}' }
           { name: 'MCP_ALLOWED_HOSTS', value: string([gatewayAppName, '${gatewayAppName}:*', gatewayInternalHost, '${gatewayInternalHost}:*', gatewayPublicHost, '${gatewayPublicHost}:*']) }
           { name: 'MCP_ALLOWED_ORIGINS', value: string([origin]) }
+        ], empty(superadminUsername) ? [] : [
+          { name: 'SUPERADMIN_USERNAME', value: superadminUsername }
+          { name: 'SUPERADMIN_PASSWORD_HASH', secretRef: 'superadmin-hash' }
         ])
         probes: [
           { type: 'Liveness', httpGet: { path: '/healthz', port: 8000 }, periodSeconds: 30 }
@@ -427,7 +454,7 @@ resource gateway 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {
       scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }
-  dependsOn: [pullRoles, kvGateway, kvDbReaders, kvEndpointDns]
+  dependsOn: [pullRoles, kvGateway, kvDbReaders, kvEndpointDns, kvSuperadminReader]
 }
 
 resource worker 'Microsoft.App/containerApps@2024-03-01' = if (deployApps) {

@@ -17,6 +17,8 @@ param webClientSecret = readEnvironmentVariable('WEB_CLIENT_SECRET')
 param webApiScope = readEnvironmentVariable('WEB_API_SCOPE')
 param webOrigin = readEnvironmentVariable('WEB_ORIGIN', '')
 param teamsBotAppId = readEnvironmentVariable('TEAMS_BOT_APP_ID', '')
+param superadminUsername = readEnvironmentVariable('SUPERADMIN_USERNAME', '')
+param superadminPasswordHash = readEnvironmentVariable('SUPERADMIN_PASSWORD_HASH', '')
 
 // Admin → Connections → Sign-in can change group roles later without a deployment.
 param entraGroupRoles = {}

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.app import Setting
 from app.secretstore import ref_pattern
-from app.settings import Settings
+from app.settings import OPENROUTER_URL, Settings
 
 Role = Literal["viewer", "approver", "admin"]
 URL = r"^$|^https://[^\s/$.?#][^\s]*$"  # https only: keys travel with every request
@@ -68,10 +68,16 @@ class SsoConfig(BaseModel):
 
 
 class LlmConfig(BaseModel):
-    provider: Literal["citygpt", "azure_openai", "claude", "other"] = "citygpt"
+    provider: Literal["citygpt", "azure_openai", "claude", "openrouter", "other"] = "citygpt"
     base_url: str = Field("", pattern=URL, max_length=500)
     model: str = Field("", max_length=100)
     api_key_ref: str = Field("", pattern=ref_pattern("LLM_API_KEY"))
+
+    @model_validator(mode="after")
+    def _openrouter(self) -> "LlmConfig":
+        if self.provider == "openrouter" and not self.base_url and self.model:
+            self.base_url = OPENROUTER_URL
+        return self
 
     def ready(self) -> bool:
         return bool(self.base_url and self.model)
@@ -125,7 +131,7 @@ def from_env(name: str, env: Settings) -> BaseModel:
                                          default_roles=list(env.entra_default_roles), groups=groups)
     if name == "llm":
         # Operator-set environment: shown as is, even an http address (Admin only accepts https).
-        return LlmConfig.model_construct(provider="citygpt", base_url=env.llm_base_url, model=env.llm_model,
+        return LlmConfig.model_construct(provider=env.llm_provider, base_url=env.llm_base_url, model=env.llm_model,
                          api_key_ref="env://LLM_API_KEY" if env.llm_api_key else "")
     if name == "teams":
         return TeamsConfig(webhook_ref="env://TEAMS_WEBHOOK_URL" if env.teams_webhook_url else "",

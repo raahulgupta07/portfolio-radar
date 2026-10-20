@@ -194,10 +194,11 @@ class TokenResolver:
     """
 
     def __init__(self, settings: Settings, entra: "EntraVerifier | None" = None,
-                 directory: Directory | None = None) -> None:
+                 directory: Directory | None = None, local_admin: Any = None) -> None:
         self.settings = settings
         self.directory = directory or Directory(settings)
         self._fixed_entra = entra
+        self.local_admin = local_admin  # app.localadmin.LocalAdmin, or None
         self._entra: EntraVerifier | None = None
         self._dev_tokens: dict[str, Caller] = {}
         if settings.app_env in ("dev", "test"):
@@ -212,6 +213,8 @@ class TokenResolver:
             raise UnknownToken("Missing bearer token")
         token = authorization[7:].strip()
         caller = self._dev_tokens.get(token)
+        if caller is None and self.local_admin is not None and token.count(".") == 2:
+            caller = self.local_admin.resolve(token)
         if caller is None:
             verifier = self._verifier()
             if verifier is None or token.count(".") != 2:

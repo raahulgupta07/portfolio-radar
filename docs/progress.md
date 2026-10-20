@@ -146,6 +146,13 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] Admin → People: who signed in, extra roles for one person, block a person
 - [x] Local demo: `docker-compose.sso.yml` with Keycloak and a sample LDAP directory; browser tests against it
 
+## Phase 20: install guide, superadmin, OpenRouter ✅
+
+- [x] README rewritten as an install guide with diagrams, configuration reference and troubleshooting
+- [x] Superadmin: local name and password (scrypt hash), viewer + admin, lock-out, audited; optional in Azure
+- [x] OpenRouter as an LLM provider, in env or Admin
+- [x] Docker Compose reads optional `backend/.env` and `web/.env` for your own values
+
 ## Still open (needs input or access)
 
 - [ ] JIRA and OpenProject read-only tokens, then confirm the field mapping in Admin

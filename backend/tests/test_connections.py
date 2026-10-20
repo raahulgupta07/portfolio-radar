@@ -306,3 +306,17 @@ async def test_keycloak_sso_settings_take_group_names(gw):
     sso = gw.services["directory"].sso
     assert (sso.provider, sso.issuer, sso.group_roles) == ("keycloak", "https://sso.city.local/realms/city",
                                                             {"/portfolio-admins": ("admin",)})
+
+
+async def test_openrouter_needs_only_a_key_and_a_model(gw, outside):
+    await ok(gw, ADMIN, "admin", "set_secret", {"ref": "kv://openrouter-key", "value": "sk-test"})
+    await ok(gw, ADMIN, "admin", "save_integration", {"name": "llm", "config": {
+        "provider": "openrouter", "model": "vendor/some-model", "api_key_ref": "kv://openrouter-key"}})
+    services = (await ok(gw, ADMIN, "admin", "get_integrations"))["services"]
+    assert services["llm"]["config"]["base_url"] == "https://openrouter.ai/api/v1"
+    t = await ok(gw, ADMIN, "admin", "test_integration", {"name": "llm"})
+    assert t["ok"], t
+    sent = outside.requests[-1]
+    assert sent.url == "https://openrouter.ai/api/v1/chat/completions" and sent.headers["x-title"] == "Portfolio Radar"
+    rs = await _llm(GatewayReader(gw, RADAR), gw.settings, gw.services["secrets"])
+    assert (rs.llm_provider, rs.llm_base_url, rs.llm_api_key) == ("openrouter", "https://openrouter.ai/api/v1", "sk-test")

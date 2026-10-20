@@ -39,6 +39,7 @@ from app.models.app import Prefix, Setting, Source
 from app.models.mcp import McpAgent, McpCall, McpTool, McpToolChange
 from app.secretstore import KV_PATTERN, SecretError, is_set, kv_name, resolve
 from app.portfolio.queries import sync_status
+from app.settings import llm_headers
 
 AUTH_METHODS = {"jira": {"api_token", "pat"}, "openproject": {"api_key"}, "multica": {"token"}}
 APP_STATUS = Literal["Not started", "In progress", "Done", "On hold"]
@@ -440,6 +441,8 @@ async def _test_llm(cfg, ctx) -> tuple[bool, str]:
         return False, "Add the address and model first. Until then Radar answers from rules"
     key = await resolve(_store(ctx), cfg.api_key_ref)
     headers = {"Authorization": f"Bearer {key}"} if key else {}
+    if cfg.provider == "openrouter":
+        headers.update(llm_headers(ctx.settings.model_copy(update={"llm_provider": "openrouter"})))
     async with _http(ctx, timeout=60) as c:
         r = await c.post(cfg.base_url.rstrip("/") + "/chat/completions", headers=headers, json={
             "model": cfg.model, "max_tokens": 20, "temperature": 0,

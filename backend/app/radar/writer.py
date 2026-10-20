@@ -12,7 +12,7 @@ import logging
 from datetime import date
 from typing import Any
 
-from app.settings import Settings
+from app.settings import Settings, llm_headers
 
 log = logging.getLogger("radar.writer")
 
@@ -32,7 +32,8 @@ async def polish(settings: Settings, task: str, facts: str, fallback: str) -> st
     try:
         from openai import AsyncOpenAI
 
-        client = AsyncOpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key or "none", timeout=60)
+        client = AsyncOpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key or "none", timeout=60,
+                             default_headers=llm_headers(settings))
         r = await client.chat.completions.create(
             model=settings.llm_model, temperature=0.2,
             messages=[{"role": "system", "content": f"You are Radar, City Holdings' portfolio agent. {STYLE}"},

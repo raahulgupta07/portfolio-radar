@@ -44,7 +44,8 @@ async def _llm(reader: SourceReader, settings: Settings, store: SecretStore) -> 
     except (SourceCallError, SecretError) as e:
         log.warning("LLM settings from Admin not used: %s", e)
         return settings
-    return settings.model_copy(update={"llm_base_url": cfg["base_url"], "llm_model": cfg["model"], "llm_api_key": key})
+    return settings.model_copy(update={"llm_provider": cfg.get("provider") or "other", "llm_base_url": cfg["base_url"],
+                                       "llm_model": cfg["model"], "llm_api_key": key})
 
 
 async def _channels(reader: SourceReader, settings: Settings, store: SecretStore) -> Settings:

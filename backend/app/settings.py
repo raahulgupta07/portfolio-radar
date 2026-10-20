@@ -4,10 +4,18 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+OPENROUTER_URL = "https://openrouter.ai/api/v1"
+
+
+def llm_headers(settings: "Settings") -> dict[str, str]:
+    """Extra request headers some LLM providers ask for (OpenRouter: the app's name and address)."""
+    if settings.llm_provider != "openrouter":
+        return {}
+    return {"X-Title": "Portfolio Radar", "HTTP-Referer": settings.llm_app_url or "https://portfolio-radar.local"}
 
 
 class Settings(BaseSettings):
@@ -76,10 +84,20 @@ class Settings(BaseSettings):
     radar_token: str = "dev-radar-job"  # the nightly Radar job (service, role radar)
     radar_agent_token: str = "dev-radar"  # the chat agent (agent)
     notifier_token: str = "dev-notifier"
-    # LLM for Radar's words (OpenAI-compatible: CityGPT, Azure OpenAI, or a proxy). Empty = rule-based answers.
+    # LLM for Radar's words (OpenAI-compatible: CityGPT, Azure OpenAI, OpenRouter, or a proxy). Empty = rule-based
+    # answers. OpenRouter: LLM_PROVIDER=openrouter, LLM_API_KEY=sk-or-…, LLM_MODEL=<id from openrouter.ai/models>;
+    # the address is filled in. Admin → Connections → LLM wins over these once saved there.
+    llm_provider: Literal["citygpt", "azure_openai", "claude", "openrouter", "other"] = "citygpt"
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
+    llm_app_url: str = ""  # sent to OpenRouter as HTTP-Referer (shows the app in its dashboard)
+
+    @model_validator(mode="after")
+    def _openrouter_address(self) -> "Settings":
+        if self.llm_provider == "openrouter" and not self.llm_base_url:
+            self.llm_base_url = OPENROUTER_URL
+        return self
 
     # Notifier channels. Empty = not set up (dev writes to the log instead).
     teams_webhook_url: str = ""
@@ -92,6 +110,13 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "portfolio-radar@cityholdings.com.mm"
     notify_email_to: list[str] = Field(default_factory=list)
+
+    # Superadmin: one local account with a password (app/localadmin.py). Empty = off.
+    # Production: SUPERADMIN_PASSWORD_HASH from `python -m app.localadmin hash`. Dev may use SUPERADMIN_PASSWORD.
+    superadmin_username: str = ""
+    superadmin_password_hash: str = ""
+    superadmin_password: str = ""
+    superadmin_session_minutes: int = 60
 
     # Secret store. The app keeps only secret names (kv://name); values live here.
     # keyvault: Azure Key Vault (production). local: a file, dev and test only.

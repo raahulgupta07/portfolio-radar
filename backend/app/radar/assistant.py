@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 from app.adapter.readers import SourceReader
 from app.radar import writer
-from app.settings import Settings
+from app.settings import Settings, llm_headers
 
 log = logging.getLogger("radar.assistant")
 
@@ -168,7 +168,8 @@ async def llm_answer(reader: SourceReader, settings: Settings, text: str, histor
     context = "\n".join(f"{h['from']}: {h['text']}" for h in history[-6:])
     recorded = _Recorded(reader)
     agent = Agent(
-        model=OpenAILike(id=settings.llm_model, base_url=settings.llm_base_url, api_key=settings.llm_api_key or "none"),
+        model=OpenAILike(id=settings.llm_model, base_url=settings.llm_base_url, api_key=settings.llm_api_key or "none",
+                         default_headers=llm_headers(settings) or None),
         tools=_tools(recorded),
         instructions=INSTRUCTIONS,
         tool_call_limit=8,

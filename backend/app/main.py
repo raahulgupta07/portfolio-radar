@@ -9,6 +9,7 @@ Each registry server is served at /<name>/mcp (Streamable HTTP). /healthz and
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -20,12 +21,14 @@ from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy import text
 
 from app.db import get_engine, session_scope
+from app.localadmin import ROLES, LocalAdmin
 from app.mcp.guard import Gateway
 from app.mcp import agents
 from app.mcp.identity import Directory, TokenResolver
 from app.mcp.registry import Registry
 from app.mcp.servers import build_registry, build_services
 from app.mcp.transport import RequireToken, build_mcp_server
+from app.models.mcp import McpCall
 from app.settings import Settings, get_settings
 from app.teams.endpoint import TeamsBot
 
@@ -40,7 +43,8 @@ def create_app(settings: Settings | None = None, registry: Registry | None = Non
     services = dict(services if services is not None else build_services(settings))
     services.setdefault("directory", directory)
     gateway = Gateway(registry, settings, services)
-    resolver = TokenResolver(settings, directory=directory)
+    local_admin = LocalAdmin(settings)
+    resolver = TokenResolver(settings, directory=directory, local_admin=local_admin)
     security = TransportSecuritySettings(
         allowed_hosts=settings.mcp_allowed_hosts, allowed_origins=settings.mcp_allowed_origins)
 
@@ -90,6 +94,33 @@ def create_app(settings: Settings | None = None, registry: Registry | None = Non
         except Exception as e:  # noqa: BLE001
             return JSONResponse({"status": "not ready", "error": type(e).__name__}, status_code=503)
         return JSONResponse({"status": "ready", "servers": sorted(registry.servers)})
+
+    @app.get("/auth/local")
+    async def local_enabled() -> dict[str, bool]:
+        """Whether the superadmin sign-in is on (the web app shows its form only then)."""
+        return {"enabled": local_admin.enabled}
+
+    @app.post("/auth/local")
+    async def local_sign_in(request: Request) -> JSONResponse:
+        """Superadmin sign-in with name and password. Called by the web app's server, never by browsers."""
+        try:
+            body = await request.json()
+            username, password = str(body.get("username", ""))[:100], str(body.get("password", ""))[:200]
+        except ValueError:
+            return JSONResponse({"error": "bad request"}, status_code=400)
+        client = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+        locked = local_admin.enabled and local_admin.locked(client)
+        token = None if locked else local_admin.sign_in(username, password, client)
+        outcome, reason = ("ok", None) if token else ("denied", "locked for 15 minutes" if locked else "wrong name or password")
+        async with session_scope() as session:
+            session.add(McpCall(caller_kind="human", caller_id=(f"local:{username}" if username else "local:?")[:200],
+                                server="auth", tool="local_sign_in", outcome=outcome, reason=reason,
+                                args=json.dumps({"client": client[:60]}), duration_ms=0))
+        if not token:
+            msg = "Too many tries. Wait 15 minutes." if locked else "Wrong name or password."
+            return JSONResponse({"error": msg}, status_code=429 if locked else 401)
+        return JSONResponse({"access_token": token, "expires_in": 60 * settings.superadmin_session_minutes,
+                             "id": local_admin.caller_id, "roles": sorted(ROLES)})
 
     teams_bot = TeamsBot(gateway)
 

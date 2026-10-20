@@ -19,6 +19,18 @@
 			<p class="note">City SSO is not set up on this server yet.</p>
 		{/if}
 
+		{#if data.local}
+			<details class="local" open={!data.sso || form?.local}>
+				<summary>Superadmin sign-in</summary>
+				<p class="note">For setting up the app and when City SSO is down. Every try is logged.</p>
+				<form method="POST" action="?/local" class="localform">
+					<label>Name<input name="username" autocomplete="username" required /></label>
+					<label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+					<button class="pill-btn primary wide" type="submit">Sign in as superadmin</button>
+				</form>
+			</details>
+		{/if}
+
 		{#if data.dev}
 			<div class="dev">
 				<h2>Development sign-in</h2>
@@ -122,4 +134,9 @@
 		font-size: 12px;
 		color: #5b635d;
 	}
+	.local { width: 100%; border-top: 1px solid #eef2ef; padding-top: 12px; }
+	.local summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+	.localform { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+	.localform label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+	.localform input { min-height: 42px; border-radius: 14px; border: 1.5px solid #dde5df; padding: 0 14px; font: inherit; }
 </style>

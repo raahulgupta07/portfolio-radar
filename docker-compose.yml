@@ -20,7 +20,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    env_file: backend/.env.example
+    env_file:
+      - backend/.env.example
+      - {path: backend/.env, required: false}  # your own values (not in git)
     environment:
       DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
       MCP_ALLOWED_HOSTS: '["127.0.0.1:*","localhost:*","mcp:*"]'
@@ -41,7 +43,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     command: ["python", "-m", "app.worker"]
-    env_file: backend/.env.example
+    env_file:
+      - backend/.env.example
+      - {path: backend/.env, required: false}  # your own values (not in git)
     environment:
       DATABASE_URL: postgresql+psycopg://radar:radar@db:5432/radar
       GATEWAY_URL: http://mcp:8000
@@ -55,7 +59,9 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
-    env_file: web/.env.example
+    env_file:
+      - web/.env.example
+      - {path: web/.env, required: false}  # your own values (not in git)
     environment:
       GATEWAY_URL: http://mcp:8000
       ORIGIN: http://localhost:3000

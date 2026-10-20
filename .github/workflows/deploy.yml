@@ -32,6 +32,8 @@ jobs:
       WEB_API_SCOPE: ${{ vars.WEB_API_SCOPE }}
       WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
       TEAMS_BOT_APP_ID: ${{ vars.TEAMS_BOT_APP_ID }}
+      SUPERADMIN_USERNAME: ${{ vars.SUPERADMIN_USERNAME }}
+      SUPERADMIN_PASSWORD_HASH: ${{ secrets.SUPERADMIN_PASSWORD_HASH }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
