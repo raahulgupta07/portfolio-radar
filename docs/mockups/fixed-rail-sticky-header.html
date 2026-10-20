@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixed rail and sticky header mockup</title>
+<style>
+:root{--bg:#e3ede6;--ink:#111;--card:#fff;--mut:#6b7570;--line:#e3eae5}
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,sans-serif;background:#f4f6f5;color:var(--ink)}
+.bar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bar b{margin-right:8px}.bar button{border:1px solid #ccd5cf;background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit}
+.bar button.on{background:#111;color:#fff;border-color:#111}
+.note{padding:10px 16px;color:var(--mut);max-width:1100px}
+.win{margin:8px 16px 24px;height:640px;border:1px solid #cfd8d2;border-radius:12px;overflow:hidden;position:relative;background:var(--bg)}
+.rail{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:64px;background:#fff;border-radius:36px;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(17,17,17,.08);z-index:30}
+.rail i{width:44px;height:44px;border-radius:50%;display:block}.rail hr{width:28px;border:0;border-top:1px solid var(--line);margin:0}
+.rail small{font-size:11px;font-weight:600;margin-top:-6px}
+.scroll{position:absolute;inset:0;overflow-y:auto;padding:0 32px 40px 102px}
+.head{position:sticky;top:0;z-index:20;background:var(--bg);padding:14px 0 12px;margin:0 -4px;padding-left:4px;padding-right:4px}
+.head.shadow{box-shadow:0 8px 12px -10px rgba(0,0,0,.25)}
+.tabs{display:inline-flex;background:#fff;border-radius:999px;padding:5px;gap:2px;margin-bottom:10px}
+.tabs span{padding:8px 16px;border-radius:999px;font-weight:500}.tabs span.on{background:#111;color:#fff}
+.row{display:flex;align-items:center;gap:14px;justify-content:space-between}
+h1{margin:0;font-size:44px;line-height:1;letter-spacing:-.035em}
+.cnt{display:inline-grid;place-items:center;min-width:40px;height:40px;border:1px solid #9aa59f;border-radius:50%;font-size:15px;margin-left:12px;vertical-align:middle}
+.act{display:flex;gap:10px;align-items:center}
+.pill{background:#111;color:#fff;border-radius:999px;padding:12px 18px;font-weight:500}
+.in{background:#fff;border-radius:999px;padding:12px 18px;color:var(--mut);min-width:230px}
+.ic{width:44px;height:44px;border-radius:50%;background:#fff;display:inline-block}
+.body{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:10px}
+.card{background:#fff;border-radius:28px;padding:22px;min-height:190px}.card.dark{background:#161616;color:#fff}.card.wide{grid-column:1/-1;min-height:120px}
+.card h3{margin:0 0 6px;font-size:18px}.card p{margin:0;color:var(--mut)}.card.dark p{color:#aab}
+.ln{height:12px;border-radius:6px;background:#eef2ef;margin-top:12px}.dark .ln{background:#2a2a2a}
+.tag{position:absolute;right:14px;top:10px;z-index:40;background:#111;color:#fff;border-radius:8px;padding:4px 8px;font-size:12px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;padding:0 16px 24px;color:var(--mut)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:#111}
+</style></head><body>
+<div class="bar"><b>Screens</b><span id="btns"></span></div>
+<div class="note">Mockup of the layout change. <b>Left menu:</b> floats in the vertical centre of the window and never moves when you scroll. <b>Header:</b> stays pinned at the top on every screen; only the cards below it scroll. Scroll the green area to try it. Phone layout stays as it is (bottom tab bar).</div>
+<div class="win"><span class="tag">scroll me</span>
+ <div class="rail"><i style="background:#cfe7d6"></i><hr><i style="background:#f9e6a6"></i><i style="background:#cfe0f7"></i><i style="background:#f5cdd1"></i><i style="background:#111"></i><hr><i style="background:#fff;border:1px solid var(--line)"></i><i style="background:#fff;border:1px solid var(--line)"></i><small>50%</small><i style="background:#111"></i></div>
+ <div class="scroll" id="sc"><div class="head" id="hd"></div><div class="body" id="bd"></div></div></div>
+<div class="legend"><span>Rail: fixed, centred, floating</span><span>Header: pinned, same position on every screen</span><span>Cards: scroll underneath</span></div>
+<script>
+const ADMIN=["Settings","Connections","MCP tools","People","Agents","Activity"];
+const S={
+ "Overview":{t:"Portfolio Overview",c:10,a:'<div class="in">Search code or name</div><span class="ic"></span><span class="ic"></span><div class="pill">View only · refresh 02:00 daily</div>',b:["Radar: 6 items need attention|dark wide","Health|","Sources|","Projects at risk|","Milestones this week|","Strategy|","Trend|"]},
+ "Projects":{t:"Projects",c:10,a:'<div class="in">Search projects</div><div class="pill">Filters</div>',b:["Project table|wide","Owners|","Sources|"]},
+ "Project detail":{t:"Project Detail",a:'<div class="pill">Back to projects</div>',b:["Summary|","Health reasons|","Milestones|","Sprints|","Tasks|","Links and risks|"]},
+ "Roadmap":{t:"Roadmap",c:"Q4",a:'<div class="in">Oct 2026 – Mar 2027</div><div class="pill">Today</div>',b:["Timeline|wide","Milestones due|","Dependencies|"]},
+ "Risks":{t:"Risks & Strategy",c:7,a:'<div class="in">Search risks</div>',b:["Open risks|","By strategy|","Risk list|wide"]},
+ "Radar":{t:"Radar",a:'<div class="pill">Ask Radar</div>',b:["Needs attention|dark","Drafts to approve|","Chat with evidence|wide"]},
+ "Account":{t:"Account",a:'',b:["Profile|","Sign out|"]},
+};
+ADMIN.forEach(n=>S[n]={admin:n,t:n,c:n=="Settings"?3:null,a:n=="Settings"?'<div class="pill">Sync all now</div>':'',b:[n+" panel|","Details|","More settings|wide"]});
+const btns=document.getElementById('btns'),hd=document.getElementById('hd'),bd=document.getElementById('bd'),sc=document.getElementById('sc');
+function show(k){const s=S[k];
+ [...btns.children].forEach(b=>b.classList.toggle('on',b.textContent==k));
+ hd.innerHTML=(s.admin?'<div class="tabs">'+ADMIN.map(x=>'<span class="'+(x==k?'on':'')+'">'+x+'</span>').join('')+'</div>':'')+'<div class="row"><div><h1 style="display:inline">'+s.t+'</h1>'+(s.c?'<span class="cnt">'+s.c+'</span>':'')+'</div><div class="act">'+s.a+'</div></div>';
+ bd.innerHTML=[...s.b,"Notes|","More|","Extra|","Extra 2|"].map(x=>{const[a,c]=x.split('|');return '<div class="card '+(c||'')+'"><h3>'+a+'</h3><p>Placeholder content</p><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div><div class="ln" style="width:70%"></div></div>'}).join('');
+ sc.scrollTop=0}
+Object.keys(S).forEach(k=>{const b=document.createElement('button');b.textContent=k;b.onclick=()=>show(k);btns.appendChild(b)});
+sc.addEventListener('scroll',()=>hd.classList.toggle('shadow',sc.scrollTop>4));
+show("Overview");
+</script></body></html>

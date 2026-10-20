@@ -162,3 +162,25 @@
 		white-space: nowrap;
 	}
 }
+
+/* Page header stays pinned at the top while the page scrolls (tablet and desktop). */
+@media (min-width: 768px) {
+	.title-row,
+	.page-head {
+		position: sticky;
+		top: 0;
+		z-index: 15;
+		background: var(--color-bg);
+		padding-block: 12px;
+		margin-block: -12px;
+	}
+	.adm-tabs {
+		position: sticky;
+		top: 0;
+		z-index: 16;
+		box-shadow: 0 0 0 14px var(--color-bg);
+	}
+	.adm .title-row {
+		top: 56px;
+	}
+}

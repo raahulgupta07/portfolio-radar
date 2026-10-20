@@ -72,10 +72,13 @@
 
 <style>
 	.rail {
-		flex: 0 0 auto;
-		align-self: flex-start;
-		position: sticky;
-		top: max(14px, calc(50vh - 300px));
+		/* Fixed to the window and centred on its height: never moves when the page scrolls. */
+		position: fixed;
+		left: 14px;
+		top: 50%;
+		transform: translateY(-50%);
+		max-height: calc(100vh - 28px);
+		overflow-y: auto;
 		width: 64px;
 		background: #fff;
 		border-radius: 36px;

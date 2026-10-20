@@ -45,6 +45,11 @@
 		gap: 24px;
 		align-items: flex-start;
 	}
+	.rail-slot {
+		/* Reserves the rail's width; the rail itself is fixed to the window. */
+		flex: 0 0 64px;
+		width: 64px;
+	}
 	main {
 		flex: 1;
 		min-width: 0;
@@ -77,6 +82,9 @@
 		.shell {
 			padding: 14px 20px 40px 12px;
 			gap: 16px;
+		}
+		:global(.rail) {
+			left: 12px;
 		}
 	}
 </style>
