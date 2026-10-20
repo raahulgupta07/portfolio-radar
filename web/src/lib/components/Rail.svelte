@@ -25,7 +25,14 @@
 		href === '/' ? page.url.pathname === '/' : page.url.pathname === href || page.url.pathname.startsWith(href + '/');
 	const dash = $derived(avg == null ? 0 : (avg / 100) * 88);
 	let menuOpen = $state(false);
+	let me: HTMLElement | undefined = $state();
+	// Close the account menu on a click anywhere outside it, or on Escape.
+	const outside = (e: MouseEvent) => {
+		if (menuOpen && me && !me.contains(e.target as Node)) menuOpen = false;
+	};
 </script>
+
+<svelte:window onclick={outside} onkeydown={(e) => e.key === 'Escape' && (menuOpen = false)} />
 
 <nav class="rail" aria-label="Main">
 	<a href="/radar" aria-label="Radar, your portfolio agent" title="Radar, your portfolio agent" style="background:#E2F2E7" aria-current={active('/radar') ? 'page' : undefined}>
@@ -59,7 +66,7 @@
 			<span>{avg}%</span>
 		</div>
 	{/if}
-	<div class="me">
+	<div class="me" bind:this={me}>
 		<button type="button" class="avatar" title={`${userName} · City SSO`} aria-haspopup="true" aria-expanded={menuOpen} onclick={() => (menuOpen = !menuOpen)}>{initials}</button>
 		{#if menuOpen}
 			<div class="menu" role="menu">
