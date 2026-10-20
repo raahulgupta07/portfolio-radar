@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     notifier_client_id: str = ""
     adapter_token: str = "dev-adapter"
 
+    # City SSO: entra (Microsoft Entra ID) or keycloak (OIDC realm; can check passwords against LDAP).
+    # Usually set in Admin → Connections → Sign-in instead. ENTRA_AUDIENCE is the audience for both.
+    sso_provider: Literal["entra", "keycloak"] = "entra"
+    oidc_issuer: str = ""  # Keycloak realm, e.g. https://sso.city.local/realms/city
+    oidc_internal_issuer: str = ""  # where the gateway reaches it, if different (Docker)
     # City SSO (Microsoft Entra ID). When ENTRA_TENANT_ID is set, the gateway accepts Entra access tokens.
     entra_tenant_id: str = ""
     entra_audience: str = ""  # the gateway's API app ID URI or client ID

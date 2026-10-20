@@ -18,7 +18,8 @@ const config = {
 				'img-src': ['self', 'data:'],
 				'connect-src': ['self'],
 				'frame-ancestors': ['none'],
-				'form-action': ['self', 'https://login.microsoftonline.com'],
+				// Sign-in and sign-out forms redirect to the SSO server (Entra, or Keycloak at City's own address).
+				'form-action': ['self', 'https:', 'http://localhost:*'],
 				'base-uri': ['self'],
 				'object-src': ['none']
 			}

@@ -75,5 +75,5 @@ async def engine(migrated_db):
 @pytest.fixture(autouse=True)
 async def clean_mcp(engine):
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE mcp.call, mcp.tool_change, mcp.tool, mcp.server RESTART IDENTITY CASCADE"))
+        await conn.execute(text("TRUNCATE mcp.call, mcp.tool_change, mcp.tool, mcp.server, mcp.person RESTART IDENTITY CASCADE"))
     yield

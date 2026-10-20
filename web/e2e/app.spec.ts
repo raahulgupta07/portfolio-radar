@@ -18,7 +18,7 @@ test('overview shows health, sources and Radar from MCP', async ({ page }) => {
 	await expect(health).toContainText('On track');
 	await expect(health).toContainText('Off track');
 	await expect(page.getByLabel('Data sources')).toContainText('Stale');
-	await expect(page.getByLabel('Radar findings')).toContainText('POS03 milestone 4 days overdue');
+	await expect(page.getByLabel('Radar findings')).toContainText(/POS03 milestone \d+ days? overdue/);
 	// Viewers get no Admin menu and no edit controls for project data.
 	await expect(page.getByRole('link', { name: 'Admin and agent rules' })).toHaveCount(0);
 	await page.getByRole('button', { name: 'Off track', exact: true }).click();

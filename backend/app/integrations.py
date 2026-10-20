@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.app import Setting
@@ -23,35 +23,48 @@ GUID = r"^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-f
 
 
 class GroupRole(BaseModel):
-    group_id: str = Field(pattern=GUID[4:], description="Entra group object ID")
+    group_id: str = Field(min_length=1, max_length=200,
+                          description="Entra: the group's object ID. Keycloak: the group name or path (e.g. /portfolio-pmo) or a realm role")
     name: str = Field("", max_length=100)
     roles: list[Role] = Field(min_length=1)
 
 
+KEYCLOAK_GROUP = r"^[\w ./@:-]{1,200}$"
+CLIENT_ID = r"^[\w.:/@-]{1,200}$"
+
+
 class SsoConfig(BaseModel):
-    tenant_id: str = Field("", pattern=GUID)
-    audience: str = Field("", max_length=200, description="The gateway's app ID URI, e.g. api://city-mcp-gateway")
+    """City SSO for the gateway. Entra ID, or Keycloak (which can check passwords against LDAP or Active
+    Directory and pass on the person's groups)."""
+
+    provider: Literal["entra", "keycloak"] = "entra"
+    tenant_id: str = Field("", pattern=GUID, description="Entra only")
+    issuer: str = Field("", max_length=300, pattern=r"^$|^https?://[^\s]+/realms/[^\s/]+$",
+                        description="Keycloak only: the realm's address, e.g. https://sso.city.local/realms/city")
+    internal_url: str = Field("", max_length=300, pattern=r"^$|^https?://[^\s]+/realms/[^\s/]+$",
+                              description="Keycloak only, optional: where the gateway reaches the realm if not at the issuer "
+                                          "address (e.g. inside Docker)")
+    audience: str = Field("", max_length=200, description="The gateway's audience, e.g. api://city-mcp-gateway or portfolio-radar-gateway")
     default_roles: list[Role] = Field(default_factory=lambda: ["viewer"])
     groups: list[GroupRole] = Field(default_factory=list, max_length=50)
     user_apps: list[str] = Field(default_factory=list, max_length=10,
-                                 description="Other app registrations people sign in through (the web app is always allowed)")
+                                 description="Other client IDs people sign in through (the web app is always allowed)")
 
-    @field_validator("user_apps")
-    @classmethod
-    def _guids(cls, v: list[str]) -> list[str]:
-        if any(not re.fullmatch(GUID[4:], x) for x in v):
-            raise ValueError("user_apps must be app (client) IDs")
-        return v
-
-    @field_validator("groups")
-    @classmethod
-    def _one_admin(cls, v: list[GroupRole]) -> list[GroupRole]:
-        if v and not any("admin" in g.roles for g in v):
+    @model_validator(mode="after")
+    def _check(self) -> "SsoConfig":
+        group_pattern = GUID[4:] if self.provider == "entra" else KEYCLOAK_GROUP
+        bad = [g.group_id for g in self.groups if not re.fullmatch(group_pattern, g.group_id)]
+        if bad:
+            raise ValueError(f"not a {'group object ID' if self.provider == 'entra' else 'group name or role'}: {bad[0]}")
+        app_pattern = GUID[4:] if self.provider == "entra" else CLIENT_ID
+        if any(not re.fullmatch(app_pattern, x) for x in self.user_apps):
+            raise ValueError("user_apps must be client IDs")
+        if self.groups and not any("admin" in g.roles for g in self.groups):
             raise ValueError("at least one group must have the admin role, or nobody can reach Admin")
-        return v
+        return self
 
     def ready(self) -> bool:
-        return bool(self.tenant_id and self.audience)
+        return bool((self.issuer if self.provider == "keycloak" else self.tenant_id) and self.audience)
 
 
 class LlmConfig(BaseModel):
@@ -107,7 +120,8 @@ def from_env(name: str, env: Settings) -> BaseModel:
     """What the environment variables say, for installs that set nothing in Admin yet."""
     if name == "sso":
         groups = [GroupRole.model_construct(group_id=g, name="", roles=list(r)) for g, r in env.entra_group_roles.items() if r]
-        return SsoConfig.model_construct(tenant_id=env.entra_tenant_id, audience=env.entra_audience,
+        return SsoConfig.model_construct(provider=env.sso_provider, tenant_id=env.entra_tenant_id, issuer=env.oidc_issuer,
+                                         internal_url=env.oidc_internal_issuer, audience=env.entra_audience,
                                          default_roles=list(env.entra_default_roles), groups=groups)
     if name == "llm":
         # Operator-set environment: shown as is, even an http address (Admin only accepts https).

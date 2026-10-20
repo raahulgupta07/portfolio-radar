@@ -136,3 +136,76 @@ def test_other_tenant_and_guests_without_a_group_are_refused():
         resolver().resolve("Bearer " + token(tid=TENANT, acct=1))
     guest = resolver().resolve("Bearer " + token(tid=TENANT, acct=1, groups=["g-pmo"]))
     assert guest.roles == {"approver"}  # only what the group gives, no default viewer
+
+
+# -- Keycloak (LDAP behind it) and Admin → People ---------------------------------------
+
+KC = "https://sso.city.local/realms/city"
+
+
+def kc_token(**claims):
+    base = {"iss": KC, "aud": ["portfolio-radar-gateway", "account"], "exp": int(time.time()) + 600,
+            "azp": "portfolio-radar-web", "preferred_username": "aye", "email": "aye@city.local",
+            "groups": ["/portfolio-viewers"], "realm_access": {"roles": ["offline_access"]}}
+    base.update(claims)
+    return jwt.encode(base, KEY, algorithm="RS256")
+
+
+def kc_resolver(people=None, **overrides):
+    settings = make_settings(dev_tokens={}, entra_user_apps=["portfolio-radar-web"], **overrides)
+    directory = Directory(settings)
+    directory.set({}, SsoRules("", "portfolio-radar-gateway", ("viewer",),
+                               {"portfolio-pmo": ("approver",), "portfolio-admin": ("admin", "viewer")},
+                               provider="keycloak", issuer=KC), people or {})
+    return TokenResolver(settings, EntraVerifier(settings, jwks_client=FakeJwks(), directory=directory), directory)
+
+
+def test_keycloak_person_gets_roles_from_ldap_groups_and_realm_roles():
+    c = kc_resolver().resolve("Bearer " + kc_token(groups=["/ldap/portfolio-pmo"]))
+    assert (c.kind, c.id, c.roles) == ("human", "aye@city.local", {"viewer", "approver"})
+    c = kc_resolver().resolve("Bearer " + kc_token(realm_access={"roles": ["portfolio-admin"]}))
+    assert "admin" in c.roles
+
+
+@pytest.mark.parametrize("bad", [
+    {"iss": "https://sso.city.local/realms/other"},
+    {"aud": "account"},
+    {"azp": "some-other-client"},
+])
+def test_keycloak_wrong_realm_audience_or_client_is_refused(bad):
+    with pytest.raises(UnknownToken):
+        kc_resolver().resolve("Bearer " + kc_token(**bad))
+
+
+def test_keycloak_service_account_must_be_a_listed_agent():
+    claude = Caller("agent", "claude", frozenset({"agent"}))
+    r = kc_resolver()
+    r.directory.agents = {"claude-for-pmo": claude}
+    tok = kc_token(preferred_username="service-account-claude-for-pmo", azp="claude-for-pmo", email=None)
+    assert r.resolve("Bearer " + tok) == claude
+    with pytest.raises(UnknownToken, match="not allowed"):
+        r.resolve("Bearer " + kc_token(preferred_username="service-account-x", azp="x"))
+
+
+def test_people_rules_add_roles_and_block():
+    from app.mcp.identity import PersonRule
+
+    r = kc_resolver(people={"aye@city.local": PersonRule(frozenset({"approver"}))})
+    assert r.resolve("Bearer " + kc_token()).roles == {"viewer", "approver"}
+    r = kc_resolver(people={"aye@city.local": PersonRule(blocked=True)})
+    with pytest.raises(UnknownToken, match="blocked"):
+        r.resolve("Bearer " + kc_token())
+    # Blocks apply to dev tokens too, so they can be tried locally.
+    settings = make_settings()
+    d = Directory(settings)
+    d.people = {"viewer@cityholdings.dev": PersonRule(blocked=True)}
+    with pytest.raises(UnknownToken):
+        TokenResolver(settings, directory=d).resolve("Bearer t-viewer")
+
+
+def test_keycloak_over_http_is_refused_in_production():
+    settings = make_settings(app_env="prod", dev_tokens={})
+    d = Directory(settings)
+    d.sso = SsoRules("", "gw", ("viewer",), {}, provider="keycloak", issuer="http://sso.city.local/realms/city")
+    with pytest.raises(UnknownToken, match="https"):
+        TokenResolver(settings, directory=d).resolve("Bearer a.b.c")

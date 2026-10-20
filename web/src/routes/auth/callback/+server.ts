@@ -20,7 +20,13 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	const { accessToken, name } = await finishSso(url.origin, code, verifier);
 	// The gateway checks the token and works out roles from Entra ID groups.
-	const who = await callTool<{ kind: 'human'; id: string; roles: string[] }>(accessToken, 'system', 'whoami', {}, { cache: false });
+	let who: { kind: 'human'; id: string; roles: string[] };
+	try {
+		who = await callTool<{ kind: 'human'; id: string; roles: string[] }>(accessToken, 'system', 'whoami', { name }, { cache: false });
+	} catch {
+		// The gateway refused the token: blocked in Admin → People, or no role from any group.
+		error(403, 'Your City account cannot use Portfolio Radar. Ask a portfolio admin for access.');
+	}
 	const opts = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: url.protocol === 'https:', maxAge: 60 * 55 };
 	cookies.set(SESSION_COOKIE, accessToken, opts);
 	cookies.set(USER_COOKIE, JSON.stringify({ name }), opts); // display name only; roles come from the gateway

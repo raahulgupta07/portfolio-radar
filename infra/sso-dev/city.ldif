@@ -1,0 +1,52 @@
+# Sample City directory for trying Keycloak + LDAP sign-in. Not real people. Dev only.
+dn: ou=people,dc=city,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=city,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=min,ou=people,dc=city,dc=local
+objectClass: inetOrgPerson
+uid: min
+cn: Min Thu
+givenName: Min
+sn: Thu
+mail: min.thu@city.local
+userPassword: viewer-pass
+
+dn: uid=aye,ou=people,dc=city,dc=local
+objectClass: inetOrgPerson
+uid: aye
+cn: Aye Aye
+givenName: Aye
+sn: Aye
+mail: aye.aye@city.local
+userPassword: approver-pass
+
+dn: uid=rahul,ou=people,dc=city,dc=local
+objectClass: inetOrgPerson
+uid: rahul
+cn: Rahul Gupta
+givenName: Rahul
+sn: Gupta
+mail: rahul.gupta@city.local
+userPassword: admin-pass
+
+dn: cn=portfolio-viewers,ou=groups,dc=city,dc=local
+objectClass: groupOfNames
+cn: portfolio-viewers
+member: uid=min,ou=people,dc=city,dc=local
+member: uid=aye,ou=people,dc=city,dc=local
+member: uid=rahul,ou=people,dc=city,dc=local
+
+dn: cn=portfolio-approvers,ou=groups,dc=city,dc=local
+objectClass: groupOfNames
+cn: portfolio-approvers
+member: uid=aye,ou=people,dc=city,dc=local
+
+dn: cn=portfolio-admins,ou=groups,dc=city,dc=local
+objectClass: groupOfNames
+cn: portfolio-admins
+member: uid=rahul,ou=people,dc=city,dc=local

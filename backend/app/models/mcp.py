@@ -99,11 +99,30 @@ class McpAgent(Base):
     caller_id: Mapped[str] = mapped_column(String(64), unique=True)  # shown in the audit log
     name: Mapped[str] = mapped_column(String(100))
     kind: Mapped[str] = mapped_column(String(10))  # agent or service
-    app_id: Mapped[str] = mapped_column(String(36), unique=True)  # Entra application (client) ID
+    app_id: Mapped[str] = mapped_column(String(200), unique=True)  # Entra application ID or Keycloak client ID
     roles: Mapped[list[str]] = mapped_column(JSON)
     servers: Mapped[list[str]] = mapped_column(JSON)  # servers it may use; omni and system always
     rate_limit: Mapped[int] = mapped_column(Integer, default=120)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_by: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class McpPerson(Base):
+    """Someone who signed in (recorded by system.whoami), or an admin added ahead of time in Admin → People.
+    Roles normally come from SSO groups; admins can add roles or block a person here."""
+
+    __tablename__ = "person"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)  # the caller id, lower case (email or UPN)
+    name: Mapped[str] = mapped_column(String(200), default="")
+    sso_roles: Mapped[list[str]] = mapped_column(JSON, default=list)  # from SSO groups at the last sign-in
+    extra_roles: Mapped[list[str]] = mapped_column(JSON, default=list)  # added in Admin
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str] = mapped_column(String(300), default="")
+    first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_by: Mapped[str] = mapped_column(String(200), default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

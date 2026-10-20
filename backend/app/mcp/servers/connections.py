@@ -12,6 +12,7 @@ None of these tools can change project data or write to a tracker.
 from __future__ import annotations
 
 import asyncio
+import re
 import smtplib
 import ssl
 from datetime import UTC, datetime, time, timedelta
@@ -407,6 +408,20 @@ async def save_integration(args: IntegrationArgs, ctx: ToolContext) -> dict:
 
 
 async def _test_sso(cfg, ctx) -> tuple[bool, str]:
+    if cfg.provider == "keycloak":
+        if not cfg.issuer:
+            return False, "Add the realm address first"
+        base = (cfg.internal_url or cfg.issuer).rstrip("/")
+        async with _http(ctx) as c:
+            r = await c.get(f"{base}/.well-known/openid-configuration")
+            if r.status_code != 200:
+                return False, f"Keycloak did not answer for this realm (HTTP {r.status_code})"
+            if r.json().get("issuer", "").rstrip("/") != cfg.issuer.rstrip("/"):
+                return False, "The realm answered with a different issuer address. Check the address people use"
+            keys = await c.get(f"{base}/protocol/openid-connect/certs")
+        if keys.status_code != 200 or not keys.json().get("keys"):
+            return False, "The realm publishes no signing keys"
+        return True, "Realm found. Sign-in keys are published" + ("" if cfg.audience else ". Add the gateway audience")
     if not cfg.tenant_id:
         return False, "Add the tenant ID first"
     url = f"https://login.microsoftonline.com/{cfg.tenant_id}/v2.0/.well-known/openid-configuration"
@@ -523,7 +538,8 @@ class AgentArgs(BaseModel):
     id: int | None = Field(None, description="Leave out to add a new agent")
     name: str = Field(min_length=2, max_length=100)
     kind: Literal["agent", "service"] = "agent"
-    app_id: str = Field(pattern=GUID[4:], description="The Entra application (client) ID the agent signs in with")
+    app_id: str = Field(pattern=r"^[\w.:/@-]{1,200}$",
+                        description="The Entra application (client) ID, or the Keycloak client ID, the agent signs in with")
     roles: list[str] = Field(default_factory=lambda: ["agent"])
     servers: list[str] = Field(min_length=1, description="Servers it may use; omni and system are always allowed")
     rate_limit: int = Field(120, ge=1, le=2000, description="Calls per minute")
@@ -580,7 +596,8 @@ async def save_agent(args: AgentArgs, ctx: ToolContext) -> dict:
     caller_id = agent_dir.slug(args.name)
     if not caller_id or caller_id in {b["caller_id"] for b in agent_dir.BUILT_IN}:
         raise ToolError("Choose another name")
-    app_id = args.app_id.lower()
+    # Entra IDs are GUIDs (any case); Keycloak client IDs are names and keep their case.
+    app_id = args.app_id.lower() if re.fullmatch(GUID[4:], args.app_id) else args.app_id
     if app_id in {k.lower() for k in ctx.settings.entra_apps}:
         raise ToolError("This app is already set up in ENTRA_APPS on the gateway")
     async with session_scope() as session:

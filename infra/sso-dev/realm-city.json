@@ -1,0 +1,88 @@
+{
+  "realm": "city",
+  "displayName": "City Holdings",
+  "enabled": true,
+  "sslRequired": "none",
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "portfolio-radar-web",
+      "name": "Portfolio Radar",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-web-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3000/auth/callback"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/login"
+      },
+      "protocolMappers": [
+        {
+          "name": "gateway audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.custom.audience": "portfolio-radar-gateway", "access.token.claim": "true", "id.token.claim": "false"}
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {"claim.name": "groups", "full.path": "false", "access.token.claim": "true", "id.token.claim": "true", "userinfo.token.claim": "true"}
+        }
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": [
+      {
+        "name": "city-ldap",
+        "providerId": "ldap",
+        "config": {
+          "enabled": ["true"],
+          "priority": ["0"],
+          "editMode": ["READ_ONLY"],
+          "vendor": ["other"],
+          "connectionUrl": ["ldap://openldap:389"],
+          "authType": ["simple"],
+          "bindDn": ["cn=admin,dc=city,dc=local"],
+          "bindCredential": ["dev-ldap-admin"],
+          "usersDn": ["ou=people,dc=city,dc=local"],
+          "usernameLDAPAttribute": ["uid"],
+          "rdnLDAPAttribute": ["uid"],
+          "uuidLDAPAttribute": ["entryUUID"],
+          "userObjectClasses": ["inetOrgPerson"],
+          "searchScope": ["1"],
+          "importEnabled": ["true"],
+          "syncRegistrations": ["false"],
+          "trustEmail": ["true"],
+          "pagination": ["false"],
+          "validatePasswordPolicy": ["false"],
+          "fullSyncPeriod": ["-1"],
+          "changedSyncPeriod": ["-1"],
+          "cachePolicy": ["DEFAULT"]
+        },
+        "subComponents": {
+          "org.keycloak.storage.ldap.mappers.LDAPStorageMapper": [
+            {"name": "username", "providerId": "user-attribute-ldap-mapper",
+             "config": {"ldap.attribute": ["uid"], "user.model.attribute": ["username"], "read.only": ["true"], "always.read.value.from.ldap": ["false"], "is.mandatory.in.ldap": ["true"]}},
+            {"name": "email", "providerId": "user-attribute-ldap-mapper",
+             "config": {"ldap.attribute": ["mail"], "user.model.attribute": ["email"], "read.only": ["true"], "always.read.value.from.ldap": ["false"], "is.mandatory.in.ldap": ["false"]}},
+            {"name": "first name", "providerId": "user-attribute-ldap-mapper",
+             "config": {"ldap.attribute": ["givenName"], "user.model.attribute": ["firstName"], "read.only": ["true"], "always.read.value.from.ldap": ["true"], "is.mandatory.in.ldap": ["false"]}},
+            {"name": "last name", "providerId": "user-attribute-ldap-mapper",
+             "config": {"ldap.attribute": ["sn"], "user.model.attribute": ["lastName"], "read.only": ["true"], "always.read.value.from.ldap": ["true"], "is.mandatory.in.ldap": ["true"]}},
+            {"name": "groups", "providerId": "group-ldap-mapper",
+             "config": {"groups.dn": ["ou=groups,dc=city,dc=local"], "group.name.ldap.attribute": ["cn"], "group.object.classes": ["groupOfNames"],
+                        "membership.ldap.attribute": ["member"], "membership.attribute.type": ["DN"], "membership.user.ldap.attribute": ["uid"],
+                        "mode": ["READ_ONLY"], "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
+                        "preserve.group.inheritance": ["false"], "ignore.missing.groups": ["false"], "drop.non.existing.groups.during.sync": ["false"],
+                        "groups.path": ["/"], "memberof.ldap.attribute": ["memberOf"]}}
+          ]
+        }
+      }
+    ]
+  }
+}

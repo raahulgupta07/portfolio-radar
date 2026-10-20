@@ -11,6 +11,7 @@ agents and the Notifier. One guard checks every call and one audit log records i
 - Approved designs: [`design/screens/`](design/screens/)
 - Deploy on Azure: [`docs/deploy-azure.md`](docs/deploy-azure.md) · Teams chat: [`docs/teams-bot.md`](docs/teams-bot.md)
 - Load test: [`docs/load-test.md`](docs/load-test.md) · Security review: [`docs/security-review.md`](docs/security-review.md)
+- Sign-in (Entra ID, Keycloak, LDAP) and Admin → People: [`docs/sso.md`](docs/sso.md)
 
 ## What is in the box
 
@@ -34,7 +35,8 @@ docker compose up --build
 docker compose exec mcp python -m app.adapter demo     # sample data, history, Radar's first check
 ```
 
-Open http://localhost:3000 and pick a sample user (dev sign-in). The gateway is on
+Open http://localhost:3000 and pick a sample user (dev sign-in). To sign in for real through
+Keycloak and a sample LDAP directory instead, add `-f docker-compose.sso.yml` (see [`docs/sso.md`](docs/sso.md)). The gateway is on
 http://localhost:8000 (`/healthz`, `/readyz`; every MCP endpoint needs a bearer token).
 
 ### Without Docker
@@ -70,7 +72,8 @@ Admins set up every connection in **Admin → Connections**, no files to edit:
 | Connections → a source | Address, JIRA Cloud or Data Center, sign-in, service account, read token, a full check, field mapping (confirmed by a person), status mapping, its tools |
 | Connections → Sign-in, LLM and sending | City SSO (tenant, audience, groups → roles), the LLM for Radar, Teams webhook and chat bot, SMTP |
 | MCP tools | Turn tools on or off (one by one or per server), review changed tools |
-| Agents | Connect CityGPT, Claude or another agent: Entra app ID, servers it may use, rate limit, "test as this agent" |
+| People | Who signed in, roles from their groups, extra roles for one person, block a person |
+| Agents | Connect CityGPT, Claude or another agent: Entra app ID or Keycloak client ID, servers it may use, rate limit, "test as this agent" |
 | Activity | The audit log, with filters |
 
 Secrets (tokens, API keys, webhook URLs, passwords) are pasted once. They go
@@ -108,14 +111,17 @@ The `demo` command turns everything on for you (dev only).
 | Agent | Radar chat, CityGPT, other City agents (`/omni`) | Read the portfolio, draft. Never approve or send |
 | Service | adapter, radar-job, notifier, teams | Read trackers (adapter), post findings and drafts (radar-job), send approved drafts and chat answers to Teams (notifier), pass Teams questions to Radar (teams) |
 
-Roles come from City SSO groups (`ENTRA_GROUP_ROLES`), or from sample users in dev.
+Roles come from City SSO groups (Entra ID, or Keycloak, which can take them from LDAP), plus any
+exceptions set in Admin → People. Sample users in dev.
 
 ## Settings that need real values
 
 | Setting | Where | For |
 | --- | --- | --- |
 | `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`, `ENTRA_GROUP_ROLES` | backend | Gateway checks City SSO tokens |
-| `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_API_SCOPE` | web | Sign-in with City SSO |
+| `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_API_SCOPE` | web | Sign-in with City SSO (Entra ID) |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `SSO_LABEL` | web | Sign-in with Keycloak (LDAP behind it) instead |
+| `SSO_PROVIDER=keycloak`, `OIDC_ISSUER`, `ENTRA_AUDIENCE`, `ENTRA_USER_APPS` | backend | Gateway checks Keycloak tokens (or set it in Admin) |
 | `SOURCE_MODE=live` | backend | Real JIRA and OpenProject, set up in Admin → Connections (Multica: mock only until its API is known) |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | backend | Radar's wording and chat (CityGPT, Azure OpenAI, …). Empty = rule-based |
 | `TEAMS_WEBHOOK_URL`, `SMTP_*`, `NOTIFY_EMAIL_TO` | backend | Sending approved digests and nudges |

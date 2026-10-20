@@ -103,6 +103,7 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 | 19 Oct 2026 | Tracker field mapping is an admin choice confirmed by a person; live sync refuses until then |
 | 19 Oct 2026 | Services get their own rate limit (6,000/min): the sync makes about 4 calls per project |
 | 19 Oct 2026 | Worker jobs use one Azure managed identity each to sign in to the gateway |
+| 20 Oct 2026 | LDAP through Keycloak, not directly: the app never handles passwords |
 | 19 Oct 2026 | Teams chat answers go only to the person who asked, in a 1:1 chat, like the in-app chat; no approval needed for that. Digests still need approval |
 
 ## Phase 13: live connectors ✅
@@ -137,6 +138,13 @@ Goal: `docker compose up` starts Postgres and the gateway; the guard works; test
 - [x] 1:1 chat with Radar in Teams through the gateway; Microsoft's token checked; City tenant only
 - [x] Answers go back to the same chat only; digests still need approval
 - [ ] First real test with City's bot registration
+
+## Phase 19: sign-in options and People ✅ (`docs/sso.md`)
+
+- [x] City SSO through Keycloak as well as Entra ID (web sign-in and gateway token checks)
+- [x] LDAP / Active Directory through Keycloak User Federation; LDAP groups become roles
+- [x] Admin → People: who signed in, extra roles for one person, block a person
+- [x] Local demo: `docker-compose.sso.yml` with Keycloak and a sample LDAP directory; browser tests against it
 
 ## Still open (needs input or access)
 

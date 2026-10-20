@@ -3,6 +3,10 @@
 	import Icon from '$lib/components/Icon.svelte';
 
 	let { data, form } = $props();
+	let ssoProvider = $state('entra');
+	$effect(() => {
+		ssoProvider = data.i.services.sso.config.provider ?? 'entra';
+	});
 	let busy = $state('');
 	const sv = $derived(data.i.services);
 	const sso = $derived(sv.sso.config);
@@ -75,28 +79,49 @@
 <div class="grid3" style="align-items:start">
 	<section class="card col" id="sso" style="background:#cfe3fb" aria-labelledby="sso-h">
 		<div class="hrow"><h2 id="sso-h">City SSO</h2>{@render status('sso')}</div>
-		<p class="sub" style="margin:0;color:#33404f">Microsoft Entra ID. People sign in with their City account; their groups decide their roles.</p>
+		<p class="sub" style="margin:0;color:#33404f">
+			People sign in with their City account; their groups decide their roles. Microsoft Entra ID, or Keycloak
+			(which can check passwords against LDAP or Active Directory and pass on the groups). Exceptions per person: <a href="/admin/people">People</a>.
+		</p>
 		<form class="form" method="POST" action="?/saveSso" use:enhance={submitting('sso')}>
-			<label class="lab">Tenant ID<input class="inp mono" name="tenant_id" value={sso.tenant_id} placeholder="00000000-0000-0000-0000-000000000000" /></label>
-			<label class="lab">Gateway audience<input class="inp mono" name="audience" value={sso.audience} placeholder="api://city-mcp-gateway" /></label>
+			<div class="lab">Provider
+				<div class="seg2" role="radiogroup" aria-label="SSO provider" style="background:#fff">
+					<label><input type="radio" name="provider" value="entra" bind:group={ssoProvider} />Entra ID</label>
+					<label><input type="radio" name="provider" value="keycloak" bind:group={ssoProvider} />Keycloak / LDAP</label>
+				</div>
+			</div>
+			{#if ssoProvider === 'keycloak'}
+				<label class="lab">Realm address (issuer)<input class="inp mono" name="issuer" value={sso.issuer ?? ''} placeholder="https://sso.city.local/realms/city" /></label>
+				<label class="lab">Internal address (optional)<input class="inp mono" name="internal_url" value={sso.internal_url ?? ''} placeholder="http://keycloak:8080/realms/city" />
+					<span class="hint">Only if the gateway reaches Keycloak by another name than people do, e.g. inside Docker.</span></label>
+			{:else}
+				<label class="lab">Tenant ID<input class="inp mono" name="tenant_id" value={sso.tenant_id} placeholder="00000000-0000-0000-0000-000000000000" /></label>
+			{/if}
+			<label class="lab">Gateway audience<input class="inp mono" name="audience" value={sso.audience} placeholder={ssoProvider === 'keycloak' ? 'portfolio-radar-gateway' : 'api://city-mcp-gateway'} /></label>
+			<label class="lab">Sign-in apps (client IDs, besides the web app's)<input class="inp mono" name="user_apps" value={(sso.user_apps ?? []).join(', ')} placeholder={ssoProvider === 'keycloak' ? 'portfolio-radar-web' : 'Web app client ID'} /></label>
 			<div class="lab">Groups → roles
 				{#each [...sso.groups, { group_id: '', name: '', roles: ['viewer'] }] as g, i (i)}
 					<div class="secret" style="gap:6px">
 						<input class="inp" style="flex:1 1 120px;min-height:36px" name="group_name" value={g.name} placeholder="Name, e.g. PMO" aria-label="Group name" />
-						<input class="inp mono" style="flex:2 1 200px;min-height:36px" name="group_id" value={g.group_id} placeholder="Group object ID" aria-label="Group object ID" />
+						<input class="inp mono" style="flex:2 1 200px;min-height:36px" name="group_id" value={g.group_id}
+							placeholder={ssoProvider === 'keycloak' ? 'Group or role, e.g. /portfolio-pmo' : 'Group object ID'} aria-label="Group" />
 						<select class="inp" style="flex:0 0 110px;min-height:36px" name="group_role" aria-label="Role">
 							{#each ROLES as r (r)}<option value={r} selected={g.roles[0] === r}>{r}</option>{/each}
 						</select>
 					</div>
 				{/each}
-				<span class="hint">Every signed-in employee is a viewer. At least one group must be admin.</span>
+				<label class="confirm" style="font-weight:500"><input type="checkbox" name="default_viewer" checked={(sso.default_roles ?? ['viewer']).includes('viewer')} /> Everyone who signs in is a viewer</label>
+				<span class="hint">At least one group must be admin.{ssoProvider === 'keycloak' ? ' Keycloak sends groups in the "groups" claim (group membership mapper) and realm roles; LDAP groups come through its LDAP group mapper.' : ''}</span>
 			</div>
 			<div class="btns"><button class="btn dark" disabled={busy !== ''}>Save SSO</button></div>
 		</form>
-		{@render testBtn('sso', 'Check tenant')}
+		{@render testBtn('sso', ssoProvider === 'keycloak' ? 'Check realm' : 'Check tenant')}
 		<div class="ro" style="flex-direction:column;align-items:flex-start;gap:4px">
 			<span>Web app sign-in (settings of the web container)</span>
-			<span class="mono" style="font-weight:500">ENTRA_CLIENT_ID {data.web.client_id ? `= ${data.web.client_id}` : 'not set'} · secret {data.web.secret_set ? 'set' : 'not set'}</span>
+			<span class="mono" style="font-weight:500">
+				{data.web.provider === 'keycloak' ? `OIDC_ISSUER = ${data.web.issuer}` : data.web.provider === 'entra' ? 'Entra ID' : 'SSO not set'} ·
+				client {data.web.client_id || 'not set'} · secret {data.web.secret_set ? 'set' : 'not set'}
+			</span>
 			{#if data.web.dev_login}<span style="font-weight:500">Sample-user sign-in is on (DEV_LOGIN). Turn it off in production.</span>{/if}
 		</div>
 	</section>
@@ -164,3 +189,7 @@
 		<div class="gw" style="display:block;padding:16px 20px;font-size:13px;line-height:1.5">Nothing is sent until a named approver says yes. Teams and email get approved drafts only, through <span class="mono">/notify/mcp</span>. The one exception is chat: Radar's answer goes back to the person who asked, in the same 1:1 chat, as in the app.</div>
 	</div>
 </div>
+
+<style>
+	.confirm { display: flex; gap: 8px; align-items: center; }
+</style>

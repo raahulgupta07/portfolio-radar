@@ -275,3 +275,34 @@ async def test_connections_overview_counts(gw):
     assert set(c["services"]) == {"sso", "llm", "teams", "email"}
     async with session_scope() as session:
         assert (await session.get(Source, "jira")).enabled
+
+
+# -- Admin → People ------------------------------------------------------------------
+
+async def test_people_are_recorded_and_admins_can_add_roles_or_block(gw):
+    await ok(gw, VIEWER, "system", "whoami", {"name": "Viewer Person"})
+    people = (await ok(gw, ADMIN, "admin", "list_people"))["people"]
+    assert [(p["id"], p["name"], p["sso_roles"]) for p in people] == [(VIEWER.id, "Viewer Person", ["viewer"])]
+    assert "admin" in await fails(gw, VIEWER, "admin", "list_people")  # admins only
+
+    saved = await ok(gw, ADMIN, "admin", "save_person", {"id": VIEWER.id, "extra_roles": ["approver"], "note": "PMO cover"})
+    assert saved["roles"] == ["approver", "viewer"]
+    rule = gw.services["directory"].people[VIEWER.id]
+    assert rule.extra_roles == {"approver"} and not rule.blocked
+    await ok(gw, ADMIN, "admin", "save_person", {"id": "new.starter@cityholdings.dev", "extra_roles": ["viewer"]})
+    await ok(gw, ADMIN, "admin", "save_person", {"id": VIEWER.id, "blocked": True})
+    assert gw.services["directory"].people[VIEWER.id].blocked
+    assert "yourself" in await fails(gw, ADMIN, "admin", "save_person", {"id": ADMIN.id, "blocked": True})
+
+
+async def test_keycloak_sso_settings_take_group_names(gw):
+    msg = await fails(gw, ADMIN, "admin", "save_integration", {"name": "sso", "config": {
+        "provider": "entra", "tenant_id": TENANT, "audience": "a", "groups": [{"group_id": "portfolio-admins", "roles": ["admin"]}]}})
+    assert "group object ID" in msg
+    await ok(gw, ADMIN, "admin", "save_integration", {"name": "sso", "config": {
+        "provider": "keycloak", "issuer": "https://sso.city.local/realms/city", "audience": "portfolio-radar-gateway",
+        "user_apps": ["portfolio-radar-web"],
+        "groups": [{"group_id": "/portfolio-admins", "name": "Admins", "roles": ["admin"]}]}})
+    sso = gw.services["directory"].sso
+    assert (sso.provider, sso.issuer, sso.group_roles) == ("keycloak", "https://sso.city.local/realms/city",
+                                                            {"/portfolio-admins": ("admin",)})

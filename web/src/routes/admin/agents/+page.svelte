@@ -103,7 +103,7 @@
 						</div>
 					</div>
 					<label class="lab">Entra app (client) ID
-						<input class="inp mono" name="app_id" required value={editing?.app_id ?? ''} placeholder="00000000-0000-0000-0000-000000000000" pattern="[0-9a-fA-F\-]{'{36}'}" />
+						<input class="inp mono" name="app_id" required value={editing?.app_id ?? ''} placeholder="Entra app ID or Keycloak client ID" pattern="[\w.:/@\-]{'{1,200}'}" />
 						<span class="hint">The agent signs in with its own City app registration. No shared keys.</span>
 					</label>
 					{#if kind === 'service'}

@@ -14,8 +14,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (token && !(isPublic && path !== '/login')) {
 		try {
 			// The gateway says who this token is; the cookie gives only the display name.
-			const who = await whoami(token);
-			if (who) user = { ...who, name: displayName(event.cookies.get(USER_COOKIE)) ?? who.id };
+			const name = displayName(event.cookies.get(USER_COOKIE));
+			const who = await whoami(token, name);
+			if (who) user = { ...who, name: name ?? who.id };
 		} catch {
 			// Gateway down: let the page load (it shows the error) with no roles at all.
 			user = { id: '', name: displayName(event.cookies.get(USER_COOKIE)) ?? 'Signed in', kind: 'human', roles: [] };

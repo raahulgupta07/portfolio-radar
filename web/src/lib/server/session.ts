@@ -13,14 +13,15 @@ function prune(now: number) {
 }
 
 /** The caller behind a token, or null if the gateway refuses it (expired, unknown). Throws if the gateway is down. */
-export async function whoami(token: string): Promise<Who | null> {
+export async function whoami(token: string, name?: string | null): Promise<Who | null> {
 	const key = tokenKey(token);
 	const now = Date.now();
 	const hit = known.get(key);
 	if (hit && now - hit.at < TTL_MS) return hit.who;
 	let who: Who | null;
 	try {
-		who = await callTool<Who>(token, 'system', 'whoami', {}, { cache: false });
+		// Also records the sign-in for Admin → People.
+		who = await callTool<Who>(token, 'system', 'whoami', name ? { name } : {}, { cache: false });
 	} catch (e) {
 		if (!(e instanceof McpToolError) && !/401|403|token/i.test(String(e))) throw e;
 		who = null;

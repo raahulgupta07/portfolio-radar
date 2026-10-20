@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import re
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app import integrations
 from app.db import session_scope
 from app.integrations import SsoConfig
-from app.mcp.identity import Caller, Directory, SsoRules
-from app.models.mcp import McpAgent
+from app.mcp.identity import Caller, Directory, PersonRule, SsoRules
+from app.models.mcp import McpAgent, McpPerson
 
 # Roles an agent or service set up in Admin may have. Approver and admin are for people only.
 AGENT_ROLES = {"agent": ["agent"], "service": ["adapter", "radar", "notifier"]}
@@ -41,11 +41,16 @@ def to_caller(a: McpAgent) -> Caller:
 
 def sso_rules(cfg: SsoConfig) -> SsoRules:
     return SsoRules(cfg.tenant_id, cfg.audience, tuple(cfg.default_roles),
-                    {g.group_id: tuple(g.roles) for g in cfg.groups}, tuple(getattr(cfg, "user_apps", ())))
+                    {g.group_id: tuple(g.roles) for g in cfg.groups}, tuple(getattr(cfg, "user_apps", ()) or ()),
+                    provider=getattr(cfg, "provider", "entra") or "entra", issuer=getattr(cfg, "issuer", "") or "",
+                    internal_url=getattr(cfg, "internal_url", "") or "")
 
 
 async def refresh(directory: Directory) -> None:
     async with session_scope() as session:
         rows = (await session.scalars(select(McpAgent).where(McpAgent.enabled.is_(True)))).all()
         sso, _ = await integrations.load(session, "sso", directory.settings)
-    directory.set({a.app_id: to_caller(a) for a in rows}, sso_rules(sso))
+        people = (await session.scalars(select(McpPerson).where(
+            (McpPerson.blocked.is_(True)) | (func.json_array_length(McpPerson.extra_roles) > 0)))).all()
+    directory.set({a.app_id: to_caller(a) for a in rows}, sso_rules(sso),
+                  {p.id: PersonRule(frozenset(p.extra_roles), p.blocked) for p in people})

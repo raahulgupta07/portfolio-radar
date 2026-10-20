@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { callTool, McpToolError } from '$lib/server/mcp';
-import { OIDC_COOKIE, SESSION_COOKIE, USER_COOKIE, devUsers, devLoginEnabled, ssoEnabled, startSso } from '$lib/server/auth';
+import { OIDC_COOKIE, SESSION_COOKIE, USER_COOKIE, devUsers, devLoginEnabled, ssoEnabled, ssoLabel, startSso } from '$lib/server/auth';
 
 type WhoAmI = { kind: 'human' | 'agent' | 'service'; id: string; roles: string[] };
 
@@ -20,6 +20,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) redirect(303, safeNext(url.searchParams.get('next'), url.origin));
 	return {
 		sso: ssoEnabled(),
+		ssoLabel: ssoLabel(),
 		dev: devLoginEnabled(),
 		devUsers: devUsers().map((u) => ({ token: u.token, name: u.name, label: u.label }))
 	};

@@ -4,7 +4,7 @@ from typing import Any
 
 from app.connectors import SOURCES, build_connectors
 from app.mcp.registry import Registry
-from app.mcp.servers import admin, connections, notify, omni, portfolio, radar, system  # noqa: F401  connections adds to admin
+from app.mcp.servers import admin, connections, notify, omni, people, portfolio, radar, system  # noqa: F401  connections and people add to admin
 from app.mcp.servers.sources import make_source_server
 from app.secretstore import build_secret_store
 from app.settings import Settings

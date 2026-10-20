@@ -7,7 +7,7 @@ Three kinds of caller, as in Uber's MCP Gateway:
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 
 from app.settings import Settings
@@ -39,7 +39,21 @@ class SsoRules:
     audience: str
     default_roles: tuple[str, ...]
     group_roles: dict[str, tuple[str, ...]]
-    user_apps: tuple[str, ...] = ()  # app registrations people sign in through, besides ENTRA_USER_APPS
+    user_apps: tuple[str, ...] = ()  # client IDs people sign in through, besides ENTRA_USER_APPS
+    provider: str = "entra"  # entra or keycloak
+    issuer: str = ""  # Keycloak realm address (what tokens say in "iss")
+    internal_url: str = ""  # where the gateway fetches the realm's keys, if not at the issuer
+
+    @property
+    def configured(self) -> bool:
+        return bool((self.issuer if self.provider == "keycloak" else self.tenant_id) and self.audience)
+
+
+@dataclass(frozen=True)
+class PersonRule:
+    """Set in Admin → People: roles on top of what SSO groups give, or blocked."""
+    extra_roles: frozenset[str] = frozenset()
+    blocked: bool = False
 
 
 class Directory:
@@ -49,13 +63,27 @@ class Directory:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.agents: dict[str, Caller] = {}  # Entra app ID -> caller
+        self.agents: dict[str, Caller] = {}  # app (client) ID -> caller
         self.sso = SsoRules(settings.entra_tenant_id, settings.entra_audience, tuple(settings.entra_default_roles),
-                            {g: tuple(r) for g, r in settings.entra_group_roles.items()})
+                            {g: tuple(r) for g, r in settings.entra_group_roles.items()},
+                            provider=settings.sso_provider, issuer=settings.oidc_issuer,
+                            internal_url=settings.oidc_internal_issuer)
+        self.people: dict[str, PersonRule] = {}  # person id (lower case) -> rule
         self.loaded_at = 0.0
 
-    def set(self, agents: dict[str, Caller], sso: SsoRules) -> None:
+    def set(self, agents: dict[str, Caller], sso: SsoRules, people: dict[str, PersonRule] | None = None) -> None:
         self.agents, self.sso, self.loaded_at = agents, sso, time.monotonic()
+        if people is not None:
+            self.people = people
+
+    def apply_person(self, caller: Caller) -> Caller:
+        """Blocked people are refused; extra roles from Admin → People are added."""
+        rule = self.people.get(caller.id.lower())
+        if rule is None:
+            return caller
+        if rule.blocked:
+            raise UnknownToken("This account is blocked in Admin → People")
+        return replace(caller, roles=caller.roles | rule.extra_roles) if rule.extra_roles else caller
 
     def app(self, app_id: str) -> Caller | None:
         spec: dict[str, Any] | None = self.settings.entra_apps.get(app_id)
@@ -69,11 +97,11 @@ class UnknownToken(Exception):
     pass
 
 
-class EntraVerifier:
-    """Checks Microsoft Entra ID access tokens (City SSO): signature from the
-    tenant's published keys, issuer, audience and expiry. Roles come from the
-    user's Entra groups (ENTRA_GROUP_ROLES); apps signing in as themselves must
-    be listed in ENTRA_APPS."""
+class SsoVerifier:
+    """Checks City SSO access tokens: Microsoft Entra ID or a Keycloak realm. Signature from the provider's
+    published keys, issuer, audience and expiry. Roles come from the person's groups (Entra group IDs, or
+    Keycloak group names and realm roles, which Keycloak can take from LDAP); apps signing in as themselves
+    must be listed in ENTRA_APPS or Admin → Agents."""
 
     def __init__(self, settings: Settings, jwks_client=None, directory: Directory | None = None) -> None:
         import jwt
@@ -82,10 +110,32 @@ class EntraVerifier:
         self.settings = settings
         self.directory = directory or Directory(settings)
         self.sso = self.directory.sso
-        tenant = self.sso.tenant_id
-        self.issuers = {f"https://login.microsoftonline.com/{tenant}/v2.0", f"https://sts.windows.net/{tenant}/"}
-        self.jwks = jwks_client or jwt.PyJWKClient(
-            f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys", cache_keys=True, lifespan=3600)
+        if self.sso.provider == "keycloak":
+            issuer = self.sso.issuer.rstrip("/")
+            if issuer.startswith("http://") and settings.app_env == "prod":
+                raise UnknownToken("Keycloak must be reached over https in production")
+            self.issuers = {issuer}
+            keys_url = f"{(self.sso.internal_url or issuer).rstrip('/')}/protocol/openid-connect/certs"
+        else:
+            tenant = self.sso.tenant_id
+            self.issuers = {f"https://login.microsoftonline.com/{tenant}/v2.0", f"https://sts.windows.net/{tenant}/"}
+            keys_url = f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
+        self.jwks = jwks_client or jwt.PyJWKClient(keys_url, cache_keys=True, lifespan=3600)
+
+    def _is_app(self, claims: dict[str, Any]) -> bool:
+        if self.sso.provider == "keycloak":
+            # Client-credentials tokens belong to the client's service account.
+            return str(claims.get("preferred_username", "")).startswith("service-account-")
+        return claims.get("idtyp") == "app" or ("scp" not in claims and "oid" in claims and "upn" not in claims
+                                                and "preferred_username" not in claims)
+
+    def _groups(self, claims: dict[str, Any]) -> list[str]:
+        groups = list(claims.get("groups", []) or [])
+        if self.sso.provider == "keycloak":
+            groups += list((claims.get("realm_access") or {}).get("roles", []) or [])
+            # Group paths ("/portfolio-pmo") also match by name ("portfolio-pmo").
+            groups += [g.rsplit("/", 1)[-1] for g in groups if isinstance(g, str) and "/" in g]
+        return [g for g in groups if isinstance(g, str)]
 
     def resolve(self, token: str) -> Caller:
         jwt = self._jwt
@@ -97,12 +147,12 @@ class EntraVerifier:
             raise UnknownToken(f"Token rejected: {type(e).__name__}") from e
         if claims.get("iss") not in self.issuers:
             raise UnknownToken("Token rejected: wrong issuer")
-        if claims.get("tid", self.sso.tenant_id) != self.sso.tenant_id:
+        entra = self.sso.provider != "keycloak"
+        if entra and claims.get("tid", self.sso.tenant_id) != self.sso.tenant_id:
             raise UnknownToken("Token rejected: another tenant")
 
-        if claims.get("idtyp") == "app" or ("scp" not in claims and "oid" in claims and "upn" not in claims
-                                            and "preferred_username" not in claims):
-            app_id = claims.get("azp") or claims.get("appid") or ""
+        if self._is_app(claims):
+            app_id = claims.get("azp") or claims.get("appid") or claims.get("client_id") or ""
             caller = self.directory.app(app_id)
             if caller is None:
                 raise UnknownToken("This app is not allowed to use the gateway")
@@ -117,15 +167,22 @@ class EntraVerifier:
         if not user_apps and self.settings.app_env == "prod":
             raise UnknownToken("Token rejected: no sign-in app is listed (ENTRA_USER_APPS)")
         group_roles: set[str] = set()
-        for group in claims.get("groups", []) or []:
+        for group in self._groups(claims):
             group_roles.update(self.sso.group_roles.get(group, ()))
-        guest = str(claims.get("acct", "0")) == "1"
+        guest = entra and str(claims.get("acct", "0")) == "1"
         # Guests (B2B) get only what a group gives them, never the default viewer role.
         roles = group_roles if guest else set(self.sso.default_roles) | group_roles
-        if not roles:
+        if entra:
+            user_id = claims.get("preferred_username") or claims.get("upn") or claims.get("oid")
+        else:
+            user_id = claims.get("email") or claims.get("preferred_username") or claims.get("sub")
+        caller = Caller(kind="human", id=str(user_id), roles=frozenset(roles))
+        if not roles and str(user_id).lower() not in self.directory.people:
             raise UnknownToken("Token rejected: no access for this account")
-        user_id = claims.get("preferred_username") or claims.get("upn") or claims.get("oid")
-        return Caller(kind="human", id=str(user_id), roles=frozenset(roles))
+        return caller
+
+
+EntraVerifier = SsoVerifier  # the name used before Keycloak support
 
 
 class TokenResolver:
@@ -155,21 +212,26 @@ class TokenResolver:
             raise UnknownToken("Missing bearer token")
         token = authorization[7:].strip()
         caller = self._dev_tokens.get(token)
-        if caller is not None:
-            return caller
-        entra = self._verifier()
-        if entra is not None and token.count(".") == 2:
-            return entra.resolve(token)
-        raise UnknownToken("Unknown or expired token")
+        if caller is None:
+            verifier = self._verifier()
+            if verifier is None or token.count(".") != 2:
+                raise UnknownToken("Unknown or expired token")
+            caller = verifier.resolve(token)
+        if caller.kind == "human":
+            caller = self.directory.apply_person(caller)
+            if not caller.roles:
+                raise UnknownToken("Token rejected: no access for this account")
+        return caller
 
-    def _verifier(self) -> EntraVerifier | None:
-        """City SSO checks, rebuilt when an admin changes the tenant or audience."""
+    def _verifier(self) -> SsoVerifier | None:
+        """City SSO checks, rebuilt when an admin changes the provider, tenant, realm or audience."""
         if self._fixed_entra is not None:
             return self._fixed_entra
         sso = self.directory.sso
-        if not sso.tenant_id or not sso.audience:
+        if not sso.configured:
             return None
-        if self._entra is None or self._entra.sso.tenant_id != sso.tenant_id or self._entra.sso.audience != sso.audience:
-            self._entra = EntraVerifier(self.settings, directory=self.directory)
+        key = lambda r: (r.provider, r.tenant_id, r.issuer, r.internal_url, r.audience)  # noqa: E731
+        if self._entra is None or key(self._entra.sso) != key(sso):
+            self._entra = SsoVerifier(self.settings, directory=self.directory)
         self._entra.sso = sso  # group rules apply at once
         return self._entra

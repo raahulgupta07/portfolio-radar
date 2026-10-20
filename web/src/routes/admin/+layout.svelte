@@ -7,6 +7,7 @@
 		{ href: '/admin', label: 'Settings' },
 		{ href: '/admin/connections', label: 'Connections' },
 		{ href: '/admin/tools', label: 'MCP tools' },
+		{ href: '/admin/people', label: 'People' },
 		{ href: '/admin/agents', label: 'Agents' },
 		{ href: '/admin/activity', label: 'Activity' }
 	];

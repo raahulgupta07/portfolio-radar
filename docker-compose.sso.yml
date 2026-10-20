@@ -1,0 +1,55 @@
+# Try City SSO locally with Keycloak, checking passwords against LDAP (dev only):
+#   docker compose -f docker-compose.yml -f docker-compose.sso.yml up -d
+#   docker compose exec mcp python -m app.adapter demo
+# Open http://localhost:3000 → "Sign in with City SSO". Sample LDAP users (infra/sso-dev/city.ldif):
+#   min / viewer-pass (viewer) · aye / approver-pass (approver) · rahul / admin-pass (admin)
+# Keycloak admin console: http://localhost:8081 (admin / dev-keycloak-admin). Not for production.
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    command: ["--copy-service"]
+    environment:
+      LDAP_ORGANISATION: City Holdings (sample)
+      LDAP_DOMAIN: city.local
+      LDAP_ADMIN_PASSWORD: dev-ldap-admin
+    volumes:
+      - ./infra/sso-dev/city.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-city.ldif:ro
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost -b dc=city,dc=local -D cn=admin,dc=city,dc=local -w dev-ldap-admin uid=min | grep -q numEntries"]
+      interval: 3s
+      retries: 30
+
+  keycloak:
+    image: keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: dev-keycloak-admin
+      # People reach Keycloak at localhost:8081; the gateway and web app at keycloak:8080.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports: ["127.0.0.1:8081:8080"]
+    volumes:
+      - ./infra/sso-dev/realm-city.json:/opt/keycloak/data/import/realm-city.json:ro
+    depends_on:
+      openldap: {condition: service_healthy}
+
+  mcp:
+    environment:
+      SSO_PROVIDER: keycloak
+      OIDC_ISSUER: http://localhost:8081/realms/city
+      OIDC_INTERNAL_ISSUER: http://keycloak:8080/realms/city
+      ENTRA_AUDIENCE: portfolio-radar-gateway
+      ENTRA_USER_APPS: '["portfolio-radar-web"]'
+      ENTRA_DEFAULT_ROLES: '[]'
+      ENTRA_GROUP_ROLES: '{"portfolio-viewers": ["viewer"], "portfolio-approvers": ["approver", "viewer"], "portfolio-admins": ["admin", "viewer"]}'
+
+  web:
+    environment:
+      OIDC_ISSUER: http://localhost:8081/realms/city
+      OIDC_INTERNAL_ISSUER: http://keycloak:8080/realms/city
+      OIDC_CLIENT_ID: portfolio-radar-web
+      OIDC_CLIENT_SECRET: dev-web-secret
+      SSO_LABEL: Sign in with City SSO (Keycloak · LDAP)
+      DEV_LOGIN: "false"

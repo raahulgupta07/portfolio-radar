@@ -14,7 +14,7 @@
 		{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
 
 		{#if data.sso}
-			<form method="POST" action="?/sso"><button class="pill-btn primary wide" type="submit">Sign in with City SSO</button></form>
+			<form method="POST" action="?/sso"><button class="pill-btn primary wide" type="submit">{data.ssoLabel}</button></form>
 		{:else}
 			<p class="note">City SSO is not set up on this server yet.</p>
 		{/if}

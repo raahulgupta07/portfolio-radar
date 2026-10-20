@@ -9,9 +9,11 @@ export const load: PageServerLoad = async ({ locals, url }) =>
 		teamsEndpoint: `${env.ORIGIN || url.origin}/api/teams/messages`,
 		// Sign-in itself happens in the web app; these stay settings of the web container.
 		web: {
-			client_id: env.ENTRA_CLIENT_ID ?? '',
-			secret_set: !!env.ENTRA_CLIENT_SECRET,
-			scope: env.ENTRA_API_SCOPE ?? '',
+			provider: env.OIDC_ISSUER ? 'keycloak' : env.ENTRA_TENANT_ID ? 'entra' : '',
+			issuer: env.OIDC_ISSUER ?? '',
+			client_id: env.OIDC_CLIENT_ID || env.ENTRA_CLIENT_ID || '',
+			secret_set: !!(env.OIDC_CLIENT_SECRET || env.ENTRA_CLIENT_SECRET),
+			scope: env.OIDC_SCOPE || env.ENTRA_API_SCOPE || '',
 			dev_login: env.DEV_LOGIN === 'true'
 		}
 	}));
@@ -36,10 +38,21 @@ export const actions: Actions = {
 		const groups = ids
 			.map((id, i) => ({ group_id: id.trim(), name: names[i]?.trim() ?? '', roles: roles[i] ? [roles[i]] : [] }))
 			.filter((g) => g.group_id);
+		const provider = str(f, 'provider') === 'keycloak' ? 'keycloak' : 'entra';
+		const userApps = str(f, 'user_apps').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
 		return act(async () => {
 			await adminCall(locals.token!, 'save_integration', {
 				name: 'sso',
-				config: { tenant_id: str(f, 'tenant_id'), audience: str(f, 'audience'), default_roles: ['viewer'], groups }
+				config: {
+					provider,
+					tenant_id: provider === 'entra' ? str(f, 'tenant_id') : '',
+					issuer: provider === 'keycloak' ? str(f, 'issuer') : '',
+					internal_url: provider === 'keycloak' ? str(f, 'internal_url') : '',
+					audience: str(f, 'audience'),
+					default_roles: f.get('default_viewer') === 'on' ? ['viewer'] : [],
+					groups,
+					user_apps: userApps
+				}
 			});
 			return 'City SSO saved. The gateway uses it at once.';
 		});
