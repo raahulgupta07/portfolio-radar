@@ -284,3 +284,19 @@ class PoProject(Base):
     name: Mapped[str] = mapped_column(String(300), default="")
     data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PoActivity(Base):
+    """One line of the program office change history (who changed what). Imported, read-only."""
+
+    __tablename__ = "po_activity"
+    __table_args__ = {"schema": SCHEMA}
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    at: Mapped[str] = mapped_column(String(40), default="", index=True)  # ISO time as written by the source
+    by: Mapped[str] = mapped_column(String(200), default="")
+    kind: Mapped[str] = mapped_column(String(16), default="project")  # program or project
+    ref_id: Mapped[str] = mapped_column(String(64), default="")
+    ref_name: Mapped[str] = mapped_column(String(300), default="")
+    type: Mapped[str] = mapped_column(String(16), default="updated")  # created, updated, deleted
+    changes: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)

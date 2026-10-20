@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.app import PoProgram, PoProject
+from app.models.app import PoActivity, PoProgram, PoProject
 
 CLOSED = {"Completed", "Cancelled"}
 ACTIVE = {"In Progress", "In UAT", "Dev Complete"}
@@ -75,7 +75,7 @@ def project_row(raw: dict[str, Any], today: date) -> dict[str, Any]:
     return {
         "id": raw.get("id", ""), "name": raw.get("name", ""), "program": raw.get("program", ""),
         "workstream": raw.get("workstream", ""), "status": status, "health": raw.get("health", ""),
-        "pct": int(raw.get("pct") or 0), "owner": raw.get("owner", ""), "start": raw.get("start", ""),
+        "pct": int(raw.get("pct") or 0), "target_precision": raw.get("targetPrecision", ""), "owner": raw.get("owner", ""), "start": raw.get("start", ""),
         "target": raw.get("target", ""), "timing_note": raw.get("timingNote", ""),
         "impact": raw.get("impact", ""), "description": raw.get("description", ""),
         "next_step": raw.get("nextStep", ""), "decision": raw.get("decision", ""), "remarks": raw.get("remarks", ""),
@@ -124,7 +124,11 @@ async def programs_view(session: AsyncSession, today: date) -> dict[str, Any]:
     projects = [project_row({**r.data, "id": r.id, "program": r.program_id}, today) for r in rows]
     projects.sort(key=lambda p: (p["program"], p["workstream"], p["id"]))
     imported = max((r.imported_at for r in [*progs, *rows]), default=None)
+    acts = (await session.execute(select(PoActivity).order_by(PoActivity.at.desc()).limit(200))).scalars().all()
+    activity = [{"id": a.id, "at": a.at, "by": a.by, "kind": a.kind, "ref_id": a.ref_id, "ref_name": a.ref_name,
+                 "type": a.type, "changes": a.changes or []} for a in acts]
     return {
+        "today": today.isoformat(), "activity": activity,
         "programs": [program_row({**p.data, "id": p.id}, projects) for p in progs],
         "projects": projects, "kpis": kpis(projects), "statuses": STATUSES,
         "imported_at": imported.isoformat() if imported else None,
@@ -136,6 +140,7 @@ async def import_file(session: AsyncSession, path: Path) -> dict[str, int]:
     doc = json.loads(path.read_text(encoding="utf-8"))
     programs = doc.get("programs") or {}
     projects = doc.get("projects") or {}
+    await session.execute(delete(PoActivity))
     await session.execute(delete(PoProject))
     await session.execute(delete(PoProgram))
     for key, value in programs.items():
@@ -146,4 +151,11 @@ async def import_file(session: AsyncSession, path: Path) -> dict[str, int]:
         data = value.get("data", value)
         session.add(PoProject(id=str(data.get("id") or key), program_id=str(data.get("program", "")),
                               name=data.get("name", ""), data=data))
-    return {"programs": len(programs), "projects": len(projects)}
+    activity = doc.get("activity") or {}
+    for key, value in activity.items():
+        data = value.get("data", value)
+        session.add(PoActivity(id=str(key), at=str(data.get("at") or ""), by=str(data.get("by") or ""),
+                               kind=str(data.get("kind") or "project"), ref_id=str(data.get("projectId") or ""),
+                               ref_name=str(data.get("projectName") or ""), type=str(data.get("type") or "updated"),
+                               changes=data.get("changes") if isinstance(data.get("changes"), list) else []))
+    return {"programs": len(programs), "projects": len(projects), "activity": len(activity)}

@@ -37,15 +37,17 @@ def test_charter_completeness_and_budget_totals():
 
 async def test_import_then_view(tmp_path):
     doc = {"programs": {"b2b": {"id": "b2b", "name": "B2B", "order": 1, "pm": "Ann", "milestones": [{"id": "m1", "name": "Go live"}]}},
+           "activity": {"a1": {"at": "2026-10-10T05:35:45Z", "by": "Ann", "kind": "project", "projectId": "P-1", "projectName": "Portal", "type": "updated", "changes": [{"field": "status", "from": "Planned", "to": "In Progress"}]}},
            "projects": {"P-1": {"id": "P-1", "name": "Portal", "program": "b2b", "status": "Planned", "milestoneId": "m1",
                                 "raci": {"R": "Bo", "A": "Ann", "C": "", "I": ""}}}}
     f = tmp_path / "po.json"
     f.write_text(json.dumps(doc))
     async with session_scope() as s:
-        assert await programs.import_file(s, f) == {"programs": 1, "projects": 1}
+        assert await programs.import_file(s, f) == {"programs": 1, "projects": 1, "activity": 1}
     async with session_scope() as s:
         v = await programs.programs_view(s, TODAY)
     assert v["programs"][0]["name"] == "B2B" and v["programs"][0]["kpis"]["projects"] == 1
+    assert v["activity"][0]["changes"][0]["to"] == "In Progress" and v["today"] == "2026-10-20"
     assert v["projects"][0]["raci"]["A"] == "Ann" and v["projects"][0]["milestone"] == "Go live"
     async with session_scope() as s:  # a second import replaces, never duplicates
         await programs.import_file(s, f)
