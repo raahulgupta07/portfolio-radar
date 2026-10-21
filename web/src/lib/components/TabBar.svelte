@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Phone: floating white tab bar at the bottom (Radar, Overview, Projects, Alerts, avatar).
+	// Phone: floating white tab bar at the bottom (Radar, Overview, Projects, Programs, Risks, avatar).
 	import { page } from '$app/state';
 	import Icon from './Icon.svelte';
 	import RadarFace, { type Mood } from './RadarFace.svelte';
@@ -17,6 +17,7 @@
 	</a>
 	<a href="/" aria-current={at('/') ? 'page' : undefined}><Icon name="home" /><span>Overview</span></a>
 	<a href="/projects" aria-current={at('/projects') ? 'page' : undefined}><Icon name="projects" /><span>Projects</span></a>
+	<a href="/programs" aria-current={at('/programs') ? 'page' : undefined}><Icon name="programs" /><span>Programs</span></a>
 	<a href="/risks" aria-current={at('/risks') ? 'page' : undefined}><Icon name="risks" /><span>Risks</span></a>
 	<a href="/account" aria-label="Account"><span class="avatar">{initials}</span></a>
 </nav>
@@ -43,7 +44,7 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 2px;
-		min-width: 52px;
+		min-width: 46px;
 		min-height: 52px;
 		justify-content: center;
 		font-size: 11px;

@@ -1,0 +1,61 @@
+{
+  "_help": "Made-up Multica answers in the shape the real API returned on 2026-10-21 (Bearer token, ?workspace_id=, issues paged by limit/offset with a total). No real names or data.",
+  "base_url": "https://multica.city.local",
+  "requests": [
+    {"path": "/api/workspaces", "json": [
+      {"id": "w1", "name": "Alpha", "slug": "alpha"},
+      {"id": "w2", "name": "Beta", "slug": "beta"}
+    ]},
+
+    {"path": "/api/properties", "params": {"workspace_id": "w1"}, "json": {"properties": [
+      {"id": "pr-ms", "name": "Milestone", "type": "select", "config": {"options": [
+        {"id": "ms-pilot", "name": "Pilot"}, {"id": "ms-live", "name": "Go live"}]}},
+      {"id": "pr-lk", "name": "Likelihood", "type": "select", "config": {"options": [
+        {"id": "lk-l", "name": "Low"}, {"id": "lk-m", "name": "Medium"}, {"id": "lk-h", "name": "High"}]}},
+      {"id": "pr-im", "name": "Impact", "type": "select", "config": {"options": [
+        {"id": "im-l", "name": "Low"}, {"id": "im-m", "name": "Medium"}, {"id": "im-h", "name": "High"}]}},
+      {"id": "pr-days", "name": "Days", "type": "number", "config": null}
+    ]}},
+    {"path": "/api/properties", "params": {"workspace_id": "w2"}, "json": {"properties": []}},
+
+    {"path": "/api/agents", "params": {"workspace_id": "w1"}, "json": [{"id": "ag1", "name": "Helper Bot"}]},
+    {"path": "/api/agents", "params": {"workspace_id": "w2"}, "json": []},
+
+    {"path": "/api/workspaces/w1/members", "json": [
+      {"id": "mem1", "user_id": "u1", "name": "Aye Thu", "role": "owner"},
+      {"id": "mem2", "user_id": "u2", "name": "Min Zaw", "role": "member"}
+    ]},
+    {"path": "/api/workspaces/w2/members", "json": []},
+
+    {"path": "/api/projects", "params": {"workspace_id": "w1"}, "json": {"total": 3, "projects": [
+      {"id": "p1", "title": "CHL-IT-DAAI-901 Alpha Portal", "status": "in_progress", "lead_id": "u1", "lead_type": "member",
+       "start_date": "2026-03-01", "due_date": "2026-12-15", "issue_count": 5, "done_count": 2, "updated_at": "2026-10-18T09:12:44Z"},
+      {"id": "p2", "title": "CHL-IT-DAAI-902 Alpha Planning", "status": "planned", "lead_id": "ag1", "lead_type": "agent",
+       "start_date": null, "due_date": null, "issue_count": 0, "done_count": 0, "updated_at": "2026-10-10T08:00:00Z"},
+      {"id": "p3", "title": "CHL-IT-DAAI-903 Alpha Archive", "status": "completed", "lead_id": null, "lead_type": null,
+       "start_date": "2026-01-05", "due_date": null, "issue_count": 0, "done_count": 0, "updated_at": "2026-09-30T08:00:00Z"}
+    ]}},
+    {"path": "/api/projects", "params": {"workspace_id": "w2"}, "json": {"total": 1, "projects": [
+      {"id": "p9", "title": "Ops Sandbox", "status": "in_progress", "lead_id": null, "lead_type": null,
+       "start_date": null, "due_date": null, "issue_count": 0, "done_count": 0, "updated_at": "2026-10-01T08:00:00Z"}
+    ]}},
+
+    {"path": "/api/issues", "params": {"workspace_id": "w1", "offset": "0"}, "json": {"total": 5, "issues": [
+      {"id": "i1", "project_id": "p1", "title": "Build login", "status": "done", "due_date": "2026-06-01", "assignee_id": "u1",
+       "labels": [], "properties": {"pr-ms": "ms-pilot"}},
+      {"id": "i2", "project_id": "p1", "title": "Drop old screen", "status": "cancelled", "due_date": "2026-07-01", "assignee_id": null,
+       "labels": [], "properties": {"pr-ms": "ms-pilot"}}
+    ]}},
+    {"path": "/api/issues", "params": {"workspace_id": "w1", "offset": "2"}, "json": {"total": 5, "issues": [
+      {"id": "i3", "project_id": "p1", "title": "Roll out", "status": "in_progress", "due_date": "2026-11-30", "assignee_id": "u2",
+       "labels": [], "properties": {"pr-ms": "ms-live"}},
+      {"id": "i4", "project_id": "p1", "title": "Write guide", "status": "backlog", "due_date": null, "assignee_id": null,
+       "labels": [], "properties": {}}
+    ]}},
+    {"path": "/api/issues", "params": {"workspace_id": "w1", "offset": "4"}, "json": {"total": 5, "issues": [
+      {"id": "i5", "project_id": "p1", "title": "Vendor delay", "status": "blocked", "due_date": null, "assignee_id": "u2",
+       "labels": [{"name": "Risk"}], "properties": {"pr-lk": "lk-h", "pr-im": "im-m"}}
+    ]}},
+    {"path": "/api/issues", "params": {"workspace_id": "w2"}, "json": {"total": 0, "issues": []}}
+  ]
+}

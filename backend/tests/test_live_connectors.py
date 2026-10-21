@@ -232,7 +232,7 @@ async def test_live_jira_set_up_in_admin_then_synced(live_gw):
     summary = await sync_all(GatewayReader(gw, ADAPTER), gw.settings, date(2026, 10, 19))
     by_source = {s.source_id: s for s in summary.sources}
     assert by_source["jira"].ok, by_source["jira"].errors
-    assert not by_source["multica"].ok and "not built yet" in by_source["multica"].errors[0]
+    assert not by_source["multica"].ok and "no address set" in by_source["multica"].errors[0]  # not set up in Admin yet
     async with session_scope() as session:
         daai = await session.scalar(select(Project).where(Project.code == "CHL-IT-DAAI-014"))
         assert daai is not None and daai.percent_done == 50 and daai.status == "In progress"

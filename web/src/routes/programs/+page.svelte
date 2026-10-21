@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { day, dayTime } from '$lib/format';
+	import ProjectDrawer from '$lib/components/ProjectDrawer.svelte';
+	import CharterDrawer from '$lib/components/CharterDrawer.svelte';
 
 	let { data } = $props();
 	const v = $derived(data.v);
@@ -11,13 +14,40 @@
 	let q = $state('');
 	let ws = $state('');
 	let status = $state('');
+	let health = $state('');
 	let sort = $state('group');
 	let raciMode = $state<'project' | 'person'>('project');
 	let showMs = $state(true);
 
+	// Admin edits. They are saved in Radar's own tables and logged in Activity with this name.
+	const isAdmin = $derived(!!data.isAdmin);
+	let drawer = $state<null | { kind: 'project' | 'charter'; project?: any; program?: any }>(null);
+	let notice = $state('');
+	let by = $state('');
+	onMount(() => {
+		try {
+			by = localStorage.getItem('radar.by') || data.user?.name || '';
+		} catch {
+			by = data.user?.name ?? '';
+		}
+	});
+	function saveName() {
+		try {
+			localStorage.setItem('radar.by', by);
+		} catch {
+			// The name is still used for this visit.
+		}
+	}
+	const openProject = (project: any = null) => (drawer = { kind: 'project', project });
+	const openCharter = (program: any = null) => (drawer = { kind: 'charter', program });
+	function done(message: string) {
+		drawer = null;
+		notice = message;
+		if (sel && !programs.some((x) => x.id === sel)) sel = '';
+	}
+
 	const prog = $derived(programs.find((p) => p.id === sel) ?? null);
 	const scoped = $derived<any[]>(sel ? v.projects.filter((p: any) => p.program === sel) : v.projects);
-	const kp = $derived(prog ? prog.kpis : v.kpis);
 	const workstreams = $derived([...new Set(scoped.map((p: any) => p.workstream).filter(Boolean))].sort() as string[]);
 	const progName = (id: string) => programs.find((p) => p.id === id)?.name ?? id;
 	const acts = $derived<any[]>(sel ? v.activity.filter((a: any) => (a.kind === 'program' ? a.ref_id === sel : v.projects.find((p: any) => p.id === a.ref_id)?.program === sel)) : v.activity);
@@ -37,19 +67,40 @@
 	const ACTIVE = ['In Progress', 'In UAT', 'Dev Complete'];
 	const names = (s: string) => (s || '').split(',').map((x) => x.trim()).filter(Boolean);
 
+	const count = (f: string) => scoped.filter((p: any) => match(p, f)).length;
+	const avgPct = $derived(scoped.length ? Math.round(scoped.reduce((a: number, p: any) => a + p.pct, 0) / scoped.length) : 0);
+	// The eight summary tiles of the approved design. Most filter the Projects tab when pressed.
 	const TILES = [
-		{ k: '', label: 'Projects', val: 'projects', bg: '#FFFFFF', note: () => (prog ? prog.name : `${programs.length} programs`) },
-		{ k: 'Completed', label: 'Completed', val: 'completed', bg: '#E2F2E7', note: () => (kp.projects ? `${Math.round((kp.completed / kp.projects) * 100)}% done` : '') },
-		{ k: '@active', label: 'Active', val: 'active', bg: '#FFFFFF', note: () => 'In progress, UAT, dev complete' },
-		{ k: 'Pending Approval', label: 'Pending approval', val: 'pending_approval', bg: '#FBE6A9', note: () => 'Needs a decision' },
-		{ k: 'Planned', label: 'Planned', val: 'planned', bg: '#FFFFFF', note: () => 'Not started' },
-		{ k: '@due30', label: 'Due in 30 days', val: 'due_30', bg: '#FFFFFF', note: () => 'Open, target within 30 days' },
-		{ k: '@overdue', label: 'Past target', val: 'past_target', bg: '#F8CDD0', note: () => 'Open, target date passed' },
-		{ k: '@noa', label: 'No accountable', val: 'no_accountable', bg: '#FBE6A9', note: () => 'Open items without one A' }
+		{ k: '', label: 'Projects', bg: '#FFFFFF', n: () => scoped.length, suffix: '', note: () => (prog ? prog.name : `In ${programs.length} programs`) },
+		{ k: 'Completed', label: 'Completed', bg: '#E2F2E7', n: () => count('Completed'), suffix: '', note: () => (scoped.length ? `${Math.round((count('Completed') / scoped.length) * 100)}% of all` : '') },
+		{ k: '@active', label: 'In progress', bg: '#CFE3FB', n: () => count('@active'), suffix: '', note: () => 'Now active' },
+		{ k: 'avg', label: 'Average progress', bg: '#FFFFFF', n: () => avgPct, suffix: '%', note: () => 'Across all projects' },
+		{ k: '@red', label: 'Red health', bg: '#F8CDD0', n: () => count('@red'), suffix: '', note: () => 'Need a decision' },
+		{ k: '@overdue', label: 'Overdue', bg: '#F8CDD0', n: () => count('@overdue'), suffix: '', note: () => 'Past target date' },
+		{ k: '@due30', label: 'Due in 30 days', bg: '#FBE6A9', n: () => count('@due30'), suffix: '', note: () => 'Coming up' },
+		{ k: 'On Hold', label: 'On hold', bg: '#E4DAF5', n: () => count('On Hold'), suffix: '', note: () => 'Paused' }
 	];
+	const HEALTH: Record<string, [string, string]> = { Green: ['#E2F2E7', '#1F5C3A'], Amber: ['#FBE6A9', '#4A4128'], Red: ['#F8CDD0', '#4E2F32'] };
+	const hl = (h: string) => HEALTH[h] ?? ['#EEF2EF', '#3E4640'];
+	// Facts for one program card: period, budget used, next open milestone.
+	function pcard(p: any) {
+		const bt = p.budget_totals;
+		const used = bt.prudent && bt.actual != null ? Math.round((bt.actual / bt.prudent) * 100) : null;
+		const next = (p.milestones || [])
+			.filter((m: any) => !m.actual && m.target && m.target >= v.today)
+			.sort((a: any, b: any) => a.target.localeCompare(b.target))[0];
+		return {
+			mine: v.projects.filter((x: any) => x.program === p.id),
+			period: p.start || p.end ? `${dt(p.start)} to ${dt(p.end)}` : '—',
+			budget: bt.prudent ? `${[p.currency, money(bt.prudent)].filter(Boolean).join(' ')}${used != null ? `, ${used}% used` : ''}` : '—',
+			next: next ? `${next.name}, ${dt(next.target)}` : '—',
+			done: p.checks.filter((c: any) => c.done).length
+		};
+	}
 	const match = (p: any, f: string) =>
 		!f ||
 		(f === '@active' ? ACTIVE.includes(p.status)
+		: f === '@red' ? p.health === 'Red'
 		: f === '@open' ? p.open
 		: f === '@due30' ? p.open && p.days_to_target != null && p.days_to_target >= 0 && p.days_to_target <= 30
 		: f === '@overdue' ? p.open && p.days_to_target != null && p.days_to_target < 0
@@ -61,17 +112,47 @@
 		const out = scoped.filter(
 			(p: any) =>
 				(!ws || p.workstream === ws) &&
+				(!health || p.health === health) &&
 				match(p, status) &&
 				(!t || [p.id, p.name, p.owner, p.next_step, p.decision, p.workstream, p.raci.R, p.raci.A, p.raci.C, p.raci.I].join(' ').toLowerCase().includes(t))
 		);
 		const by: Record<string, (a: any, b: any) => number> = {
 			group: () => 0,
 			target: (a, b) => (a.target || '9999').localeCompare(b.target || '9999'),
+			name: (a, b) => a.name.localeCompare(b.name),
+			progress: (a, b) => b.pct - a.pct,
 			status: (a, b) => v.statuses.indexOf(a.status) - v.statuses.indexOf(b.status),
 			updated: (a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')
 		};
 		return [...out].sort(by[sort]);
 	});
+
+	// The Projects table, with a heading row per program when grouped.
+	const listed = $derived.by(() => {
+		if (sort !== 'group' || sel) return rows.map((p: any) => ({ p, g: '', n: 0 }));
+		const out: { p: any; g: string; n: number }[] = [];
+		let last = '';
+		for (const p of rows) {
+			if (p.program !== last) {
+				last = p.program;
+				out.push({ p: null, g: progName(p.program), n: rows.filter((x: any) => x.program === p.program).length });
+			}
+			out.push({ p, g: '', n: 0 });
+		}
+		return out;
+	});
+	const filtered = $derived(!!(q || ws || status || health || sort !== 'group'));
+	function clearFilters() {
+		q = '';
+		ws = '';
+		status = '';
+		health = '';
+		sort = 'group';
+	}
+	const ini = (n: string) => (n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+	const raciShort = (p: any) => [p.raci.R && `R ${p.raci.R}`, p.raci.A && `A ${p.raci.A}`].filter(Boolean).join(', ') || '—';
+	// Bar colours of the timeline legend.
+	const BAR: Record<string, string> = { Completed: '#3A9A68', 'In Progress': '#111111', 'In UAT': '#111111', 'Dev Complete': '#111111', 'Pending Approval': '#B9C7BD', Planned: '#B9C7BD', 'On Hold': '#D27A45', Cancelled: '#D2606A' };
 
 	function tile(k: string) {
 		status = k === '' || status === k ? '' : k;
@@ -159,18 +240,19 @@
 		}
 		const out: any[] = [];
 		const groups = sel ? [progs[0]].filter(Boolean) : progs;
+		// A charter milestone shows as a diamond on the project that links to it; one nobody links to gets its own row.
+		const linked = new Set(dated.filter((p: any) => p.milestone_id).map((p: any) => `${p.program}|${p.milestone_id}`));
 		for (const pr of groups) {
 			out.push({ t: 'head', label: pr.name });
-			for (const { m } of mrows.filter((r) => r.pr.id === pr.id)) {
-				const l = pos(ms(m.start || m.target));
-				const r = pos(ms(m.target || m.start));
-				out.push({ t: 'ms', label: `Milestone: ${m.name}`, sub: `${dt(m.start)} to ${dt(m.target)}`, left: l, width: Math.max(1.2, r - l), actual: m.actual ? pos(ms(m.actual)) : null });
-			}
 			for (const p of dated.filter((x: any) => x.program === pr.id)) {
 				const hasS = !!p.start;
 				const l = pos(ms(p.start || p.target));
 				const r = pos(ms(p.target || p.start));
-				out.push({ t: 'proj', label: `${p.id}  ${p.name}`, sub: `${p.workstream || progName(p.program)} · ${p.status} · ${p.pct}%`, left: l, width: Math.max(1.2, r - l), bar: hasS && !!p.target, pin: !!p.target, pinAt: r, color: st(p.status)[2], pct: p.pct });
+				const m = showMs && p.milestone_id ? (pr.milestones || []).find((x: any) => x.id === p.milestone_id) : null;
+				out.push({ t: 'proj', label: `${p.id}  ${p.name}`, sub: `${p.workstream || progName(p.program)} · ${p.status} · ${p.pct}%`, left: l, width: Math.max(1.2, r - l), bar: hasS && !!p.target, pin: !!p.target, pinAt: r, color: BAR[p.status] ?? '#B9C7BD', pct: p.pct, dia: m && (m.target || m.start) ? pos(ms(m.target || m.start)) : null, diaName: m?.name ?? '' });
+			}
+			for (const { m } of mrows.filter((r) => r.pr.id === pr.id && !linked.has(`${r.pr.id}|${r.m.id}`))) {
+				out.push({ t: 'ms', label: `Milestone: ${m.name}`, sub: `${dt(m.start)} to ${dt(m.target)}`, dia: pos(ms(m.target || m.start)), diaName: m.name, actual: m.actual ? pos(ms(m.actual)) : null });
 			}
 		}
 		return { months, today: pos(todayMs), rows: out, undated };
@@ -198,20 +280,31 @@
 
 <header class="title-row">
 	<div>
-		<div class="eyebrow">City Holdings · Digital Programs</div>
-		<div class="t"><h1>Digital Portfolio Tracker</h1><span class="cnt tabular">{programs.length}</span></div>
-		<div class="sub">Program office data, read-only{v.imported_at ? ` · imported ${day(v.imported_at)}` : ''} · Today {day(v.today)}</div>
+		<div class="t"><h1>Programs</h1><span class="cnt tabular">{programs.length}</span></div>
+		<div class="sub">
+			{isAdmin ? 'Edits are saved in Radar and logged in Activity. JIRA, OpenProject and Multica are never changed.' : 'Program office data, read-only.'}
+			{v.imported_at ? ` Imported ${day(v.imported_at)}.` : ''} Today {day(v.today)}
+		</div>
 	</div>
 	<div class="acts">
+		{#if isAdmin}
+			<label class="who">Your name<input type="text" bind:value={by} onchange={saveName} maxlength="100" autocomplete="name" /></label>
+		{/if}
 		<button type="button" class="pill light" onclick={exportJson}>Backup JSON</button>
-		{#if scoped.length}<button type="button" class="pill dark" onclick={exportCsv}>Download Excel</button>{/if}
+		{#if scoped.length}<button type="button" class="pill light" onclick={exportCsv}>Download Excel</button>{/if}
+		{#if isAdmin && programs.length}<button type="button" class="pill dark" onclick={() => openProject()}>+ Add project</button>{/if}
 	</div>
 </header>
+
+{#if notice}
+	<p class="notice" role="status">{notice} <button type="button" onclick={() => (notice = '')}>Dismiss</button></p>
+{/if}
 
 {#if !programs.length}
 	<section class="card empty">
 		<h2>No program office data yet</h2>
-		<p>An admin loads the program office file with <code>python -m app.adapter po-import &lt;file&gt;</code>. Programs, charters, budgets, RACI and next steps then show here. This page never edits them.</p>
+		<p>An admin loads the program office file with <code>python -m app.adapter po-import &lt;file&gt;</code>. Programs, charters, budgets, RACI and next steps then show here.{isAdmin ? ' Or add the first program here.' : ''}</p>
+		{#if isAdmin}<button type="button" class="pill dark" onclick={() => openCharter()}>+ Add program</button>{/if}
 	</section>
 {:else}
 	<nav class="chips" aria-label="Programs">
@@ -219,13 +312,14 @@
 		{#each programs as p (p.id)}
 			<button type="button" class:on={sel === p.id} onclick={() => pick(p.id)}>{p.name} <span>{p.kpis.projects}</span></button>
 		{/each}
+		{#if isAdmin}<button type="button" class="addp" onclick={() => openCharter()}>+ Add program</button>{/if}
 	</nav>
 
 	<section class="kpis" aria-label="Summary">
 		{#each TILES as t (t.label)}
-			{@const n = kp[t.val]}
-			<button type="button" class="kpi" style="background:{n && t.bg !== '#FFFFFF' ? t.bg : '#FFFFFF'}" aria-pressed={t.k !== '' && status === t.k} onclick={() => tile(t.k)}>
-				<span class="kl">{t.label}</span><span class="kv tabular">{n}</span><span class="kn">{t.note()}</span>
+			{@const n = t.n()}
+			<button type="button" class="kpi" disabled={t.k === 'avg'} style="background:{n && t.bg !== '#FFFFFF' ? t.bg : '#FFFFFF'}" aria-pressed={t.k !== '' && t.k !== 'avg' && status === t.k} onclick={() => tile(t.k)}>
+				<span class="kl">{t.label}</span><span class="kv tabular">{n}{t.suffix}</span><span class="kn">{t.note()}</span>
 			</button>
 		{/each}
 	</section>
@@ -253,26 +347,45 @@
 				<optgroup label="Status">{#each v.statuses as s (s)}<option value={s}>{s}</option>{/each}</optgroup>
 				<optgroup label="Views"><option value="@open">All open items</option><option value="@active">Active work</option><option value="@due30">Due in 30 days</option><option value="@overdue">Past target</option><option value="@noa">No accountable</option></optgroup>
 			</select>
-			<select class="field" bind:value={sort} aria-label="Sort"><option value="group">Group by program</option><option value="target">Sort by target date</option><option value="status">Sort by status</option><option value="updated">Recently updated</option></select>
+			<select class="field" bind:value={health} aria-label="Health"><option value="">All health</option><option>Green</option><option>Amber</option><option>Red</option></select>
+			<select class="field" bind:value={sort} aria-label="Sort"><option value="group">Group by program</option><option value="target">Sort: Target date</option><option value="name">Sort: Name</option><option value="progress">Sort: Progress</option><option value="status">Sort: Status</option><option value="updated">Recently updated</option></select>
 			{#if tab === 'timeline'}<label class="chk"><input type="checkbox" bind:checked={showMs} /> Charter milestones</label>{/if}
-			<span class="sub">{rows.length} of {scoped.length}</span>
+			<span class="sub">Showing {rows.length} of {scoped.length}</span>
+			{#if filtered}<button type="button" class="clear" onclick={clearFilters}>Clear filters</button>{/if}
 		</div>
 	{/if}
 
 	{#if tab === 'programs'}
 		<div class="pgrid">
 			{#each programs as p (p.id)}
-				<button type="button" class="card pcard" onclick={() => pick(p.id)}>
-					<div class="eyebrow">Program</div>
-					<h2 class="ptitle">{p.title || p.name}</h2>
-					<div class="sub">{p.pm || 'No program manager yet'}</div>
-					<div class="stbar">{#each segs(v.projects.filter((x: any) => x.program === p.id)) as g (g.s)}<span style="flex:{g.n};background:{st(g.s)[2]}"></span>{/each}</div>
-					<div class="sub">{p.kpis.completed} of {p.kpis.projects} done · charter {p.completeness}% complete</div>
-				</button>
+				{@const c = pcard(p)}
+				<article class="card pcard">
+					<div class="phead">
+						<div>
+							<h2 class="ptitle">{p.name}</h2>
+							<div class="sub0">{p.pm ? `${p.pm} manages` : 'No program manager yet'}{p.sponsor ? `, ${p.sponsor} sponsors` : ''}</div>
+						</div>
+						<span class="chip" style="background:{hl(p.health)[0]};color:{hl(p.health)[1]}">{p.health || 'Not rated'}</span>
+					</div>
+					<dl class="pfacts">
+						<dt>Period</dt><dd>{c.period}</dd>
+						<dt>Budget</dt><dd>{c.budget}</dd>
+						<dt>Next milestone</dt><dd>{c.next}</dd>
+					</dl>
+					<div class="stbar">{#each segs(c.mine) as g (g.s)}<span style="flex:{g.n};background:{st(g.s)[2]}" title="{g.s}: {g.n}"></span>{/each}</div>
+					<div class="pprog"><b>{p.kpis.completed} of {p.kpis.projects} done</b><span class="ptrack"><i style="width:{p.kpis.projects ? Math.round((p.kpis.completed / p.kpis.projects) * 100) : 0}%"></i></span><span>Charter {c.done}/{p.checks.length}</span></div>
+					<div class="pmsg" class:none={!p.statusSummary}>{p.statusSummary || p.itscMessage || 'No status summary yet'}</div>
+					<div class="pbtns">
+						<button type="button" class="pbtn dark" onclick={() => pick(p.id)}>Open charter</button>
+						<button type="button" class="pbtn" onclick={() => { pick(p.id); tab = 'projects'; }}>Projects ({p.kpis.projects})</button>
+						{#if isAdmin}<button type="button" class="pbtn" onclick={() => openCharter(p)}>Edit charter</button>{/if}
+					</div>
+				</article>
 			{/each}
 		</div>
 	{:else if tab === 'charter' && prog}
 		<section class="card">
+			{#if isAdmin}<button type="button" class="pbtn edit-r" onclick={() => openCharter(prog)}>Edit charter</button>{/if}
 			<div class="eyebrow">Program charter</div>
 			<h2 class="big">{prog.title || prog.name}</h2>
 			{#if prog.title && prog.title !== prog.name}<div class="sub">Program: {prog.name}</div>{/if}
@@ -360,20 +473,31 @@
 		<section class="card flush">
 			<div class="scroll">
 				<table style="min-width:1080px">
-					<thead><tr><th class="first">ID</th><th>Project</th><th>Workstream</th><th>Owner</th><th>Status</th><th>% done</th><th>Target</th><th>Next step</th><th class="last">Decision needed</th></tr></thead>
+					<thead><tr><th class="first">ID</th><th>Project</th><th>Owner</th><th>Status</th><th>Health</th><th>Progress</th><th>Start</th><th>Target</th><th class="last">RACI</th></tr></thead>
 					<tbody>
-						{#each rows as p (p.id)}
-							<tr>
-								<td class="first mono">{p.id}</td>
-								<td><b>{p.name}</b>{#if !sel}<div class="muted">{progName(p.program)}</div>{/if}</td>
-								<td>{p.workstream || '—'}</td>
-								<td>{p.owner || '—'}</td>
-								<td><span class="chip" style="background:{st(p.status)[0]};color:{st(p.status)[1]}">{p.status}</span></td>
-								<td class="nw"><span class="bar"><i style="width:{p.pct}%"></i></span> <span class="tabular">{p.pct}%</span></td>
-								<td>{dt(p.target)}{#if due(p)}<div class="due" class:over={p.days_to_target < 0}>{due(p)}</div>{/if}{#if p.timing_note}<div class="muted">{p.timing_note}</div>{/if}</td>
-								<td>{p.next_step || '—'}</td>
-								<td class="last">{p.decision || '—'}</td>
-							</tr>
+						{#each listed as r (r.p ? r.p.id : `g-${r.g}`)}
+							{#if r.p}
+								{@const p = r.p}
+								<tr>
+									<td class="first mono">{p.id}{#if isAdmin}<div><button type="button" class="edit" onclick={() => openProject(p)}>Edit</button></div>{/if}</td>
+									<td>
+										<b>{p.name}</b>
+										{#if p.description}<div class="muted desc">{p.description}</div>{/if}
+										{#if p.next_step}<div class="muted desc"><b>Next:</b> {p.next_step}</div>{/if}
+										{#if p.decision}<div class="muted desc"><b>Decision:</b> {p.decision}</div>{/if}
+										{#if sel === '' && sort !== 'group'}<div class="muted">{progName(p.program)}{p.workstream ? ` · ${p.workstream}` : ''}</div>{:else if p.workstream}<div class="muted">{p.workstream}</div>{/if}
+									</td>
+									<td class="nw">{p.owner || '—'}</td>
+									<td><span class="chip" style="background:{st(p.status)[0]};color:{st(p.status)[1]}">{p.status}</span></td>
+									<td>{#if p.health}<span class="chip" style="background:{hl(p.health)[0]};color:{hl(p.health)[1]}">{p.health}</span>{:else}<span class="muted">Not rated</span>{/if}</td>
+									<td><div class="prog"><span class="ptrack"><i style="width:{p.pct}%"></i></span><b class="tabular">{p.pct}%</b></div></td>
+									<td class="nw">{dt(p.start)}</td>
+									<td class="nw">{dt(p.target)}{#if due(p)}<div class="due" class:over={p.days_to_target < 0}>{due(p)}</div>{/if}{#if p.timing_note}<div class="muted">{p.timing_note}</div>{/if}</td>
+									<td class="last raci-s">{raciShort(p)}</td>
+								</tr>
+							{:else}
+								<tr><td colspan="9" class="grp">{r.g} ({r.n})</td></tr>
+							{/if}
 						{:else}
 							<tr><td colspan="9" class="none c">No projects match.</td></tr>
 						{/each}
@@ -382,13 +506,15 @@
 			</div>
 		</section>
 	{:else if tab === 'timeline'}
+		<p class="tlnote">Every project on one calendar. The red dashed line is today, {day(v.today)}.</p>
 		<section class="card tlc">
 			<div class="legend">
-				<span><i style="width:16px;height:8px;border:1.5px solid #111;border-radius:3px"></i>Charter milestone</span>
-				<span><i style="width:3px;height:12px;background:#2E8B57"></i>Milestone actual</span>
-				<span><i style="width:9px;height:9px;transform:rotate(45deg);background:#111"></i>Project target</span>
-				<span><i style="width:16px;height:8px;border-radius:4px;background:#4F8FDB"></i>Project start to target</span>
-				<span><i style="width:2px;height:14px;background:#C23B3B"></i>Today</span>
+				<span><i style="width:18px;height:8px;border-radius:4px;background:#111"></i>In progress</span>
+				<span><i style="width:18px;height:8px;border-radius:4px;background:#3A9A68"></i>Completed</span>
+				<span><i style="width:18px;height:8px;border-radius:4px;background:#B9C7BD"></i>Planned</span>
+				<span><i style="width:18px;height:8px;border-radius:4px;background:#D27A45"></i>On hold</span>
+				<span><i style="width:10px;height:10px;border-radius:2px;border:1.5px solid #111;background:#F2C14E;transform:rotate(45deg)"></i>Charter milestone</span>
+				<span><i style="width:0;height:12px;border-left:2px dashed #B02A2A"></i>Today</span>
 			</div>
 			<div class="scroll">
 				<div style="min-width:960px">
@@ -402,13 +528,10 @@
 								<div class="track">
 									{#each tl.months as m (m.left)}<span class="grid-l" style="left:{m.left}%"></span>{/each}
 									<span class="today" style="left:{tl.today}%"></span>
-									{#if r.t === 'ms'}
-										<span class="msbar" style="left:{r.left}%;width:{r.width}%"></span>
-										{#if r.actual != null}<span class="act" style="left:{r.actual}%"></span>{/if}
-									{:else}
-										{#if r.bar}<span class="pbar" style="left:{r.left}%;width:{r.width}%;background:{r.color}">{r.pct}%</span>{/if}
-										{#if r.pin}<span class="pin" style="left:calc({r.pinAt}% - 5px);background:{r.bar ? '#111' : r.color}"></span>{/if}
-									{/if}
+									{#if r.t === 'proj'}
+										{#if r.bar}<span class="pbar" style="left:{r.left}%;width:{r.width}%;background:{r.color};color:{r.color === '#B9C7BD' ? '#111' : '#fff'}">{r.pct}%</span>{:else if r.pin}<span class="pbar pt" style="left:calc({r.pinAt}% - 5px);background:{r.color}"></span>{/if}
+									{:else if r.actual != null}<span class="act" style="left:{r.actual}%"></span>{/if}
+									{#if r.dia != null}<span class="dia" style="left:calc({r.dia}% - 7px)" title="Milestone: {r.diaName}"></span>{/if}
 								</div>
 							</div>
 						{/if}
@@ -462,18 +585,29 @@
 				</table></div>
 			</section>
 		{/if}
+		{#if raciMode === 'project'}
+			<section class="load" aria-label="Load by person">
+				{#each people as p (p.name)}
+					<div class="pc">
+						<div class="pn"><span class="av lg">{ini(p.name)}</span><b>{p.name}</b></div>
+						<div class="rc"><span class="r">R {p.R}</span><span class="a">A {p.A}</span><span class="c">C {p.C}</span><span class="i">I {p.I}</span></div>
+					</div>
+				{/each}
+			</section>
+		{/if}
 	{:else if tab === 'activity'}
 		<section class="card">
 			<div class="ahead"><h2>Activity <span class="muted2">({acts.length})</span></h2><span class="muted">Every add, status change, date move, RACI edit and charter edit, with who made it.</span></div>
 			<ul class="alist">
 				{#each acts as a (a.id)}
 					<li>
-						<div class="atime"><div class="b">{dayTime(a.at)}</div><div class="muted">{a.by || 'Not recorded'}</div></div>
+						<time class="atime">{dayTime(a.at)}</time>
 						<div class="awhat">
 							<div><span class="alink">{a.kind === 'program' ? 'Charter · ' : `${a.ref_id} `}{a.ref_name}</span> <span class="chip" style="background:{a.type === 'created' ? '#E2F2E7' : a.type === 'deleted' ? '#F8CDD0' : '#CFE3FB'};color:{a.type === 'created' ? '#1F5C3A' : a.type === 'deleted' ? '#4E2F32' : '#1F3F66'}">{a.type === 'created' ? 'added' : a.type}</span></div>
 							{#each a.changes.slice(0, 6) as c, i (i)}<div class="ch">{c.field}: {c.from === '' || c.from == null ? '(empty)' : c.from} → {c.to === '' || c.to == null ? '(empty)' : c.to}</div>{/each}
 							{#if a.changes.length > 6}<div class="ch">+{a.changes.length - 6} more fields</div>{/if}
 						</div>
+						<span class="who"><span class="av">{ini(a.by)}</span>{a.by || 'Not recorded'}</span>
 					</li>
 				{:else}
 					<li class="none c">No changes yet.</li>
@@ -483,8 +617,21 @@
 	{/if}
 {/if}
 
+{#if drawer?.kind === 'project'}
+	<ProjectDrawer project={drawer.project} {programs} statuses={v.statuses} defaultProgram={sel || programs[0]?.id || ''} {by} onclose={() => (drawer = null)} ondone={done} />
+{:else if drawer?.kind === 'charter'}
+	<CharterDrawer program={drawer.program} {by} onclose={() => (drawer = null)} ondone={done} />
+{/if}
+
 <style>
-	.title-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+	.who { display: inline-flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; min-height: 44px; padding: 0 6px 0 18px; font-size: 13px; color: #5b635d; font-weight: 600; }
+	.who input { border: 0; background: #f4f7f5; border-radius: 999px; min-height: 32px; padding: 0 14px; width: 120px; font: inherit; font-size: 13px; color: #111; }
+	.notice { margin: 0; background: #e2f2e7; color: #1f5c3a; border-radius: 18px; padding: 10px 18px; font-size: 14px; font-weight: 600; }
+	.notice button { margin-left: 8px; border: 0; background: none; font: 700 12px inherit; text-decoration: underline; cursor: pointer; color: inherit; min-height: 32px; }
+	.addp { min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1.5px dashed #b9c7bd !important; background: transparent !important; color: #3e4640 !important; font: 600 13px inherit; cursor: pointer; }
+	.edit { margin-top: 4px; border: 0; background: #f1f5f2; border-radius: 999px; padding: 0 12px; min-height: 32px; font: 700 12px inherit; cursor: pointer; color: #111; }
+	.edit-r { float: right; }
+	.title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 	.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: #5b635d; text-transform: uppercase; }
 	.t { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
 	h1 { margin: 0; font-size: 46px; font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
@@ -517,8 +664,20 @@
 	.checks { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: #5b635d; } .checks b { width: 100%; color: #111; } .checks .y { color: #1f5c3a; font-weight: 600; }
 	p { margin: 0 0 6px; font-size: 14px; line-height: 1.6; } .pre { white-space: pre-wrap; color: #3e4640; } .none { color: #7a847d; } .msg { margin-top: 10px; font-weight: 600; }
 	.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; } .grid.two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-	.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-	.pcard { text-align: left; border: 0; cursor: pointer; font: inherit; color: #111; }
+	.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+	.pcard { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 22px 24px; }
+	.phead { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+	.sub0 { font-size: 12px; color: #5b635d; margin-top: 2px; }
+	.pfacts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; margin: 0; }
+	.pfacts dt { color: #5b635d; } .pfacts dd { margin: 0; font-weight: 600; }
+	.pcard .stbar { margin: 0; background: #eef2ef; }
+	.pprog { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #3e4640; }
+	.ptrack { flex: 1; height: 6px; border-radius: 3px; background: #e3eae5; overflow: hidden; } .ptrack i { display: block; height: 100%; background: #111; }
+	.pmsg { font-size: 13px; color: #3e4640; background: #f4f7f5; border-radius: 16px; padding: 10px 14px; line-height: 1.5; }
+	.pbtns { display: flex; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+	.pbtn { min-height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #f1f5f2; color: #111; font: 700 13px inherit; cursor: pointer; }
+	.pbtn.dark { background: #111; color: #fff; }
+	.kpi:disabled { cursor: default; }
 	.scroll { overflow-x: auto; }
 	table { width: 100%; border-collapse: collapse; font-size: 13px; }
 	th { text-align: left; font-size: 12px; font-weight: 700; color: #5b635d; padding: 12px 14px; background: #f4f7f5; white-space: nowrap; }
@@ -529,7 +688,6 @@
 	.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; } .muted { color: #5b635d; font-size: 12px; } .muted2 { color: #5b635d; font-weight: 500; font-size: 13px; }
 	.nw { white-space: nowrap; }
 	.chip { display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-	.bar { display: inline-block; width: 56px; height: 6px; border-radius: 3px; background: #e3eaE5; vertical-align: middle; overflow: hidden; } .bar i { display: block; height: 100%; background: #111; }
 	.due { font-size: 12px; font-weight: 600; color: #4a4128; } .due.over { color: #b02a2a; }
 	/* timeline */
 	.tlc { padding: 20px 24px 26px; }
@@ -541,19 +699,35 @@
 	.track { flex: 1; position: relative; height: 30px; } .track.axis { height: 26px; border-bottom: 1px solid #eef2ef; }
 	.mlab { position: absolute; top: 0; bottom: 4px; font-size: 12px; font-weight: 700; color: #5b635d; padding-left: 6px; display: flex; align-items: flex-end; }
 	.grid-l { position: absolute; top: 0; bottom: 0; border-left: 1px solid #eef2ef; }
-	.today { position: absolute; top: 0; bottom: 0; width: 2px; background: #c23b3b; opacity: 0.8; }
-	.pbar { position: absolute; top: 7px; height: 16px; border-radius: 8px; color: #fff; font-size: 10px; font-weight: 700; padding: 0 8px; box-sizing: border-box; display: flex; align-items: center; overflow: hidden; }
-	.pin { position: absolute; top: 10px; width: 10px; height: 10px; transform: rotate(45deg); }
-	.msbar { position: absolute; top: 8px; height: 14px; border: 1.5px solid #111; border-radius: 4px; box-sizing: border-box; }
+	.today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #b02a2a; opacity: 0.7; }
+	.pbar { position: absolute; top: 10px; height: 10px; min-width: 6px; border-radius: 5px; color: #fff; font-size: 0; box-sizing: border-box; }
+	.pbar.pt { width: 10px; height: 10px; border-radius: 2px; transform: rotate(45deg); }
+	.dia { position: absolute; top: 8px; width: 14px; height: 14px; transform: rotate(45deg); border-radius: 3px; border: 2px solid #111; background: #f2c14e; box-sizing: border-box; }
 	.act { position: absolute; top: 5px; width: 3px; height: 20px; background: #2e8b57; }
+	.tlnote { margin: 0; font-size: 13px; color: #3e4640; }
+	.axis { background: #f4f7f5; border-radius: 0; }
+	/* projects table */
+	.grp { padding: 12px 28px 8px; font-size: 15px; font-weight: 700; border-top: 1px solid #eef2ef; }
+	.desc { max-width: 44ch; margin-top: 2px; }
+	.prog { display: flex; align-items: center; gap: 8px; min-width: 110px; font-size: 12px; } .prog b { width: 34px; text-align: right; }
+	.raci-s { font-size: 12px; color: #3e4640; line-height: 1.5; }
+	.clear { background: none; border: 0; font: 700 12px inherit; min-height: 44px; cursor: pointer; text-decoration: underline; color: #111; }
+	/* raci load cards */
+	.load { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+	.pc { background: #fff; border-radius: 22px; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; } .pn { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+	.rc { display: flex; gap: 6px; } .rc span { border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; background: #eef2ef; color: #3e4640; }
+	.rc .r { background: #cfe3fb; color: #1f3f66; } .rc .a { background: #e2f2e7; color: #1f5c3a; } .rc .c { background: #fbe6a9; color: #4a4128; }
 	.tags { display: flex; flex-wrap: wrap; gap: 8px; } .tags > span { background: #f1f5f2; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
 	/* raci and activity */
 	.subtabs { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
 	.seg { display: inline-flex; background: #fff; border-radius: 999px; padding: 4px; }
 	.seg button { min-height: 38px; padding: 0 18px; border-radius: 999px; border: 0; background: transparent; font: 600 14px inherit; cursor: pointer; color: #111; } .seg button.on { background: #111; color: #fff; }
 	.ahead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; } .ahead h2 { font-size: 18px; margin: 0; }
-	.alist { list-style: none; margin: 0; padding: 0; } .alist li { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 14px 0; border-top: 1px solid #eef2ef; }
-	.atime { flex: 0 0 170px; font-size: 13px; } .awhat { flex: 1 1 360px; min-width: 0; font-size: 14px; }
+	.alist { list-style: none; margin: 0; padding: 0; } .alist li { display: grid; grid-template-columns: 130px 1fr auto; gap: 6px 16px; padding: 14px 0; border-top: 1px solid #eef2ef; align-items: center; }
+	.atime { font-size: 12px; color: #5b635d; } .awhat { min-width: 0; font-size: 14px; }
+	.who { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #3e4640; }
+	.av { width: 28px; height: 28px; border-radius: 999px; background: #111; color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; } .av.lg { width: 34px; height: 34px; font-size: 12px; }
+	@media (max-width: 767px) { .alist li { grid-template-columns: 1fr; } }
 	.alink { font-weight: 700; text-decoration: underline; } .ch { font-size: 13px; color: #3e4640; margin-top: 4px; }
 	@media (max-width: 767px) { h1 { font-size: 34px; } }
 </style>

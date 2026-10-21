@@ -13,11 +13,11 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +31,7 @@ from app.models.app import (
     NonCompliant,
     Prefix,
     Project,
+    RawPull,
     Risk,
     Setting,
     Snapshot,
@@ -137,6 +138,27 @@ def _dt(v: str | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+# -- raw archive ---------------------------------------------------------------
+
+ARCHIVE_DAYS = 90  # how long a night's raw answer is kept
+
+
+async def archive_pull(session: AsyncSession, sid: str, day: date, listing: list[dict[str, Any]],
+                       fetched: list[dict[str, Any]], risks: list[Any], links: list[Any],
+                       rejected: list[tuple[str, str]]) -> None:
+    """Keep what the source answered, before the prefix rule and status mapping, one row per source per day."""
+    payload = {
+        "listing": listing,
+        "projects": [{k: v for k, v in item.items() if k != "match"} for item in fetched],
+        "risks": risks, "links": links,
+        "rejected": [{"name": n, "reason": r} for n, r in rejected],
+    }
+    await session.execute(pg_insert(RawPull).values(source_id=sid, pulled_on=day, projects=len(fetched), payload=payload)
+                          .on_conflict_do_update(index_elements=["source_id", "pulled_on"],
+                                                 set_={"pulled_at": func.now(), "projects": len(fetched), "payload": payload}))
+    await session.execute(delete(RawPull).where(RawPull.source_id == sid, RawPull.pulled_on < day - timedelta(days=ARCHIVE_DAYS)))
+
+
 # -- one source ----------------------------------------------------------------
 
 async def sync_source(reader: SourceReader, source: Source, prefixes: list[str], status_map: StatusMap,
@@ -197,6 +219,7 @@ async def sync_source(reader: SourceReader, source: Source, prefixes: list[str],
         return res
 
     async with session_scope() as session:
+        await archive_pull(session, sid, now.date(), listing["projects"], fetched, risks, links, rejected)
         existing = {p.source_key: p for p in (await session.scalars(select(Project).where(Project.source_id == sid))).all()}
         seen: set[str] = set()
         for item in fetched:

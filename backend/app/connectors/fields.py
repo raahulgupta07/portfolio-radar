@@ -62,7 +62,19 @@ class OpenProjectFields(BaseModel):
     impact_field: str = Field("", pattern=r"^$|^customField[0-9]{1,6}$", description="Work package custom field for impact")
 
 
-MODELS: dict[str, type[BaseModel]] = {"jira": JiraFields, "openproject": OpenProjectFields}
+class MulticaFields(BaseModel):
+    workspaces: list[str] = Field(default_factory=list, max_length=20,
+                                  description="Workspace slugs or ids to read. Empty = every workspace the token can see")
+    milestone_property: str = Field("Milestone", max_length=60,
+                                    description="Name of the select property on issues that names the milestone. Empty = no milestones")
+    in_progress_statuses: list[str] = Field(default_factory=lambda: ["in_progress"], max_length=20,
+                                            description="Issue statuses counted as 'in progress' (done and cancelled count as done, the rest as to do)")
+    risk_label: str = Field("", max_length=60, description="Label that marks an issue as a risk. Empty = risks are not read")
+    likelihood_property: str = Field("", max_length=60, description="Select property (Low, Medium, High) for risk likelihood")
+    impact_property: str = Field("", max_length=60, description="Select property (Low, Medium, High) for risk impact")
+
+
+MODELS: dict[str, type[BaseModel]] = {"jira": JiraFields, "openproject": OpenProjectFields, "multica": MulticaFields}
 
 
 class FieldMapping(BaseModel):

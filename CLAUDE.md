@@ -18,7 +18,9 @@ that checks every project and tells people what needs attention.
 ## Hard rules (never break these)
 
 - **Read-only to the sources.** Never add a write call to JIRA, OpenProject or Multica.
-- **No edit controls for project data** anywhere in the UI. Changes happen in the source tool.
+- **No edit controls for source project data** (JIRA, OpenProject, Multica). Changes happen in the source tool.
+  Exception approved by Rahul on 2026-10-21: Admin-only edit drawers on the Programs screen save to Radar's own
+  `po_*` tables only, are logged in Activity with the saver's name, and never write to a source tool.
 - **Radar never sends without approval.** Every digest, email or Teams message is a draft
   until a named person approves it.
 - **Rules first, LLM second.** Health and data-quality checks are plain code rules.

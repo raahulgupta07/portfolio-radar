@@ -17,7 +17,7 @@ from typing import Any
 import httpx
 
 from app.connectors import fields as fm
-from app.connectors import jira, openproject
+from app.connectors import jira, multica, openproject
 from app.connectors.base import SourceUnavailable
 from app.connectors.http import ReadOnlyHttpClient
 from app.db import session_scope
@@ -97,6 +97,9 @@ class LiveConnector:
                                         transport=self.transport)
             return jira.JiraConnector(client, flavor=flavor, base_url=row.base_url,
                                       fields=fm.JiraFields.model_validate(mapping.fields), aspirations=aspirations)
+        if self.source_id == "multica":
+            client = ReadOnlyHttpClient(self.name, row.base_url, multica.auth_headers(token), transport=self.transport)
+            return multica.MulticaConnector(client, base_url=row.base_url, fields=fm.MulticaFields.model_validate(mapping.fields))
         client = ReadOnlyHttpClient(self.name, row.base_url, openproject.auth_headers(token), transport=self.transport)
         return openproject.OpenProjectConnector(client, base_url=row.base_url, aspirations=aspirations,
                                                 fields=fm.OpenProjectFields.model_validate(mapping.fields))

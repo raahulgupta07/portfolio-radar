@@ -151,6 +151,21 @@ class Snapshot(Base):
     detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class RawPull(Base):
+    """What one source answered on one day, kept as received (before the prefix rule and status mapping).
+    One row per source per day, replaced if the sync runs again that day. For checking and replaying a night."""
+
+    __tablename__ = "raw_pull"
+    __table_args__ = (UniqueConstraint("source_id", "pulled_on"), {"schema": SCHEMA})
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(32), index=True)
+    pulled_on: Mapped[date] = mapped_column(Date, index=True)
+    pulled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    projects: Mapped[int] = mapped_column(Integer, default=0)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 class Setting(Base):
     """Settings an admin changes in the app (schedule, Radar rules, alerts).
     Values here override the environment defaults."""

@@ -321,7 +321,7 @@ async def check_source(args: SourceArg, ctx: ToolContext) -> dict:
 
 
 class FieldMappingArgs(BaseModel):
-    source: Literal["jira", "openproject"]
+    source: Literal["jira", "openproject", "multica"]
     mapping: dict[str, Any] = Field(description="Where each app field comes from; see get_source → fields.about")
     confirm: bool = Field(False, description="True = a person checked this against the tracker. Live sync needs it")
 

@@ -1,10 +1,11 @@
 """`/portfolio/mcp`: everything the screens show and agents read, from our
-database. Read-only. Every project row carries its source, sync time and a
-`stale` flag, so answers can show their evidence."""
+database. Every project row carries its source, sync time and a `stale` flag, so
+answers can show their evidence. Read-only, except four Admin-only tools that edit
+the program office data in Radar's own po_* tables (never a tracker)."""
 
 import base64
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
@@ -115,6 +116,68 @@ async def get_programs(args, ctx: ToolContext) -> dict:
     committee, plus its projects with owner, RACI, next step and decision needed, and summary counts. Read-only."""
     async with session_scope() as session:
         return await programs.programs_view(session, today_in(ctx.settings))
+
+
+class SaveRecord(BaseModel):
+    data: dict[str, Any] = Field(description="The fields to save. Leave out `id` to add a new one")
+    base_updated_at: str | None = Field(None, max_length=40, description="`updated_at` as the editor loaded it, to catch a lost edit")
+    by_name: str | None = Field(None, max_length=100, description="Name of the person saving, shown in Activity")
+
+
+class DeleteRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    by_name: str | None = Field(None, max_length=100)
+
+
+def _saver(ctx: ToolContext, by_name: str | None) -> str:
+    who = (by_name or "").strip()
+    return f"{who} ({ctx.caller.id})" if who else ctx.caller.id
+
+
+def _payload(args: SaveRecord) -> dict[str, Any]:
+    return {**args.data, **({"base_updated_at": args.base_updated_at} if args.base_updated_at is not None else {})}
+
+
+@server.tool(callers={"human"}, roles={"admin"}, read_only=False, input_model=SaveRecord)
+async def save_project(args: SaveRecord, ctx: ToolContext) -> dict:
+    """Admin only. Add a program-office project (no id) or change one. Saved in Radar's own tables and logged in
+    Activity with who made the change. Nothing is written to JIRA, OpenProject or Multica."""
+    async with session_scope() as session:
+        try:
+            return await programs.save_project(session, _payload(args), _saver(ctx, args.by_name))
+        except programs.SaveError as e:
+            raise ToolError(str(e)) from e
+
+
+@server.tool(callers={"human"}, roles={"admin"}, read_only=False, input_model=DeleteRecord)
+async def delete_project(args: DeleteRecord, ctx: ToolContext) -> dict:
+    """Admin only. Delete a program-office project from Radar's own tables and log it in Activity."""
+    async with session_scope() as session:
+        try:
+            return await programs.delete_project(session, args.id, _saver(ctx, args.by_name))
+        except programs.SaveError as e:
+            raise ToolError(str(e)) from e
+
+
+@server.tool(callers={"human"}, roles={"admin"}, read_only=False, input_model=SaveRecord)
+async def save_program(args: SaveRecord, ctx: ToolContext) -> dict:
+    """Admin only. Add a program (no id) or change a program's charter: dates, text, budget, milestones, measurables,
+    team and steering committee. Saved in Radar's own tables and logged in Activity. Nothing goes to a tracker."""
+    async with session_scope() as session:
+        try:
+            return await programs.save_program(session, _payload(args), _saver(ctx, args.by_name))
+        except programs.SaveError as e:
+            raise ToolError(str(e)) from e
+
+
+@server.tool(callers={"human"}, roles={"admin"}, read_only=False, input_model=DeleteRecord)
+async def delete_program(args: DeleteRecord, ctx: ToolContext) -> dict:
+    """Admin only. Delete a program that has no projects left, from Radar's own tables, and log it in Activity."""
+    async with session_scope() as session:
+        try:
+            return await programs.delete_program(session, args.id, _saver(ctx, args.by_name))
+        except programs.SaveError as e:
+            raise ToolError(str(e)) from e
 
 
 @server.tool(callers=CALLERS, roles=ROLES)

@@ -21,5 +21,8 @@
     "scheduled": "Not started",
     "in specification": "Not started"
   },
-  "multica": {}
+  "multica": {
+    "planned": "Not started",
+    "in_progress": "In progress"
+  }
 }
